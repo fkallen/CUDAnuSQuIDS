@@ -1,0 +1,333 @@
+#!/bin/sh
+
+#This is the nuSQuIDS configuration file adapted for use with CUDAnuSQuIDS
+
+check_pkgconfig(){
+	if [ "$CHECKED_PKGCONFIG" ]; then return; fi
+	echo "Looking for pkg-config..."
+	which pkg-config 2>&1 > /dev/null
+	if [ "$?" -ne 0 ]; then
+		echo "Error: pkg-config not found; you will need to specify library locations manually" 1>&2
+		exit 1
+	fi
+	CHECKED_PKGCONFIG=1
+}
+
+find_package(){
+	PKG=$1
+	VAR_PREFIX=`echo $PKG | tr [:lower:] [:upper:]`
+	TMP_FOUND=`eval echo "$"${VAR_PREFIX}_FOUND`
+	if [ "$TMP_FOUND" ]; then return; fi
+	check_pkgconfig
+	echo "Looking for $PKG..."
+
+	pkg-config --exists $PKG
+	if [ "$?" -ne 0 ]; then
+		echo " $PKG not found with pkg-config"
+		return
+	fi
+	if [ $# -ge 2 ]; then
+		MIN_VERSION=$2
+		pkg-config --atleast-version $MIN_VERSION $PKG
+		if [ "$?" -ne 0 ]; then
+			echo "Error: installed $PKG version ("`pkg-config --modversion $PKG`") is too old; version >=$MIN_VERSION is required" 1>&2
+			exit 1
+		fi
+	fi
+	echo " Found $PKG version `pkg-config --modversion $PKG`"
+	eval ${VAR_PREFIX}_FOUND=1
+	eval ${VAR_PREFIX}_VERSION=\"`pkg-config --modversion $PKG`\"
+	eval ${VAR_PREFIX}_CFLAGS=\"`pkg-config --cflags $PKG`\"
+	eval ${VAR_PREFIX}_LDFLAGS=\"`pkg-config --libs $PKG`\"
+	eval ${VAR_PREFIX}_INCDIR=\"`pkg-config --variable=includedir $PKG`\"
+	eval ${VAR_PREFIX}_LIBDIR=\"`pkg-config --variable=libdir $PKG`\"
+}
+
+find_hdf5(){
+	PKG=hdf5
+	echo "Looking for $PKG..."
+	VAR_PREFIX=`echo $PKG | tr [:lower:] [:upper:]`
+	TMP_FOUND=`eval echo "$"${VAR_PREFIX}_FOUND`
+	if [ "$TMP_FOUND" ]; then return; fi
+
+	which h5cc 2>&1 > /dev/null
+	if [ "$?" -ne 0 ]; then return; fi
+
+	which h5ls 2>&1 > /dev/null
+	if [ "$?" -eq 0 ]; then
+		HDF5_VERSION=`h5ls --version | sed 's/.* \([0-9.]*\)/\1/'`
+		echo " Found $PKG version $HDF5_VERSION via executables in \$PATH"
+		if [ $# -ge 1 ]; then
+			MIN_VERSION=$1
+			#TODO: actually check version
+		fi
+	else
+		echo " h5ls not found; cannot check $PKG version"
+		echo " Proceeding with unknown version and hoping for the best"
+	fi
+	HDF5_COMPILE_COMMAND=`h5cc -show`
+	for item in $HDF5_COMPILE_COMMAND; do
+		item=`echo "$item" | sed 's| |\n|g' | sed -n 's/.*-L\([^ ]*\).*/\1/p'`
+		if [ -n "$item" ]; then
+			POSSIBLE_HDF5_LIBDIRS="$POSSIBLE_HDF5_LIBDIRS
+				$item"
+		fi
+	done
+	for HDF5_LIBDIR in $POSSIBLE_HDF5_LIBDIRS; do
+		if [ -d $HDF5_LIBDIR -a \( -e $HDF5_LIBDIR/libhdf5.a -o -e $HDF5_LIBDIR/libhdf5.so \) ]; then
+			break
+		fi
+	done
+	if [ ! -d $HDF5_LIBDIR -o ! \( -e $HDF5_LIBDIR/libhdf5.a -o -e $HDF5_LIBDIR/libhdf5.so \) ]; then
+		echo " Unable to guess $PKG library directory"
+		return
+	fi
+	POSSIBLE_HDF5_INCDIRS=`echo "$HDF5_COMPILE_COMMAND" | sed 's| |\n|g' | sed -n 's/.*-I\([^ ]*\).*/\1/p'`
+	POSSIBLE_HDF5_INCDIRS="$POSSIBLE_HDF5_INCDIRS ${HDF5_LIBDIR}/../include"
+	for HDF5_INCDIR in $POSSIBLE_HDF5_INCDIRS; do
+		if [ -d $HDF5_INCDIR -a -e $HDF5_INCDIR/H5version.h ]; then
+			break
+		fi
+	done
+	if [ ! -d $HDF5_INCDIR -o ! $HDF5_INCDIR/H5version.h ]; then
+		echo " Unable to guess $PKG include directory"
+		return
+	fi
+
+	HDF5_CFLAGS="-I${HDF5_INCDIR}"
+	HDF5_LDFLAGS=`echo "$HDF5_COMPILE_COMMAND" | \
+	sed 's/ /\\
+	/g' | \
+	sed -n -E \
+	-e '/^[[:space:]]*-l/p' \
+	-e '/^[[:space:]]*-L/p' \
+	-e '/^[[:space:]]*-Wl,/p' \
+	-e 's/^[[:space:]]*.*lib([^.]*)\.a/-l\1/p' \
+	-e 's/^[[:space:]]*.*lib([^.]*)\.so/-l\1/p' \
+	-e 's/^[[:space:]]*.*lib([^.]*)\.dylib/-l\1/p' `
+	HDF5_LDFLAGS=`echo $HDF5_LDFLAGS` # collapse to single line
+
+	HDF5_FOUND=1
+}
+
+ensure_found(){
+	PKG=$1
+	VAR_PREFIX=`echo $PKG | tr [:lower:] [:upper:]`
+	TMP_FOUND=`eval echo "$"${VAR_PREFIX}_FOUND`
+	if [ "$TMP_FOUND" ]; then return; fi
+	#not found
+	echo "Error: $PKG not installed or not registered with pkg-config" 1>&2
+	lowername=`echo $PKG | tr [A-Z] [a-z]`
+	echo "Please specify location using the --with-"$lowername" flag" 1>&2
+	exit 1
+}
+
+PREFIX=/usr/local
+
+HELP="Usage: ./configure [OPTION]...
+Installation directories:
+  --prefix=PREFIX         install files in PREFIX
+                          [$PREFIX]
+By default, \`make install' will install all the files in
+\`$PREFIX/bin', \`$PREFIX/lib' etc.  You can specify
+an installation prefix other than \`$PREFIX' using \`--prefix',
+for instance \`--prefix=\$HOME'.
+The following options can be used to manually specify the
+locations of dependencies:
+  --with-gsl=DIR           use the copy of GSL in DIR
+                           assuming headers are in DIR/include
+                           and libraries in DIR/lib
+  --with-gsl-incdir=DIR    use the copy of GSL in DIR
+  --with-gsl-libdir=DIR    use the copy of GSL in DIR
+  --with-hdf5=DIR          use the copy of HDF5 in DIR
+                           assuming headers are in DIR/include
+                           and libraries in DIR/lib
+  --with-hdf5-incdir=DIR   use the copy of HDF5 in DIR
+  --with-hdf5-libdir=DIR   use the copy of HDF5 in DIR
+  --with-squids=DIR        use the copy of SQuIDS in DIR
+                           assuming headers are in DIR/include
+                           and libraries in DIR/lib
+  --with-squids-incdir=DIR        use the copy of SQuIDS in DIR
+  --with-squids-libdir=DIR        use the copy of SQuIDS in DIR
+
+  --with-nusquids=DIR        use the copy of nuSQuIDS in DIR
+                           assuming headers are in DIR/include
+                           and libraries in DIR/lib
+  --with-nusquids-incdir=DIR        use the copy of nuSQuIDS in DIR
+  --with-nusquids-libdir=DIR        use the copy of nuSQuIDS in DIR
+"
+
+for var in "$@"
+do
+	if [ "$var" = "--help" -o "$var" = "-h" ]; then
+		echo "$HELP"
+		exit 0
+	fi
+
+	TMP=`echo "$var" | sed -n 's/^--prefix=\(.*\)$/\1/p'`
+	if [ "$TMP" ]; then PREFIX="$TMP"; continue; fi
+
+	TMP=`echo "$var" | sed -n 's/^--with-gsl=\(.*\)$/\1/p'`
+	if [ "$TMP" ]; then
+		GSL_INCDIR="${TMP}/include";
+		GSL_LIBDIR="${TMP}/lib";
+	continue; fi
+
+	TMP=`echo "$var" | sed -n 's/^--with-gsl-incdir=\(.*\)$/\1/p'`
+	if [ "$TMP" ]; then GSL_INCDIR="$TMP"; continue; fi
+
+	TMP=`echo "$var" | sed -n 's/^--with-gsl-libdir=\(.*\)$/\1/p'`
+	if [ "$TMP" ]; then GSL_LIBDIR="$TMP"; continue; fi
+
+	TMP=`echo "$var" | sed -n 's/^--with-hdf5=\(.*\)$/\1/p'`
+	if [ "$TMP" ]; then
+		HDF5_INCDIR="${TMP}/include";
+		HDF5_LIBDIR="${TMP}/lib";
+	continue; fi
+
+	TMP=`echo "$var" | sed -n 's/^--with-hdf5-incdir=\(.*\)$/\1/p'`
+	if [ "$TMP" ]; then HDF5_INCDIR="$TMP"; continue; fi
+
+	TMP=`echo "$var" | sed -n 's/^--with-hdf5-libdir=\(.*\)$/\1/p'`
+	if [ "$TMP" ]; then HDF5_LIBDIR="$TMP"; continue; fi
+
+	TMP=`echo "$var" | sed -n 's/^--with-squids=\(.*\)$/\1/p'`
+	if [ "$TMP" ]; then
+		SQUIDS_INCDIR="${TMP}/include";
+		SQUIDS_LIBDIR="${TMP}/lib";
+	continue; fi
+
+	TMP=`echo "$var" | sed -n 's/^--with-squids-incdir=\(.*\)$/\1/p'`
+	if [ "$TMP" ]; then SQUIDS_INCDIR="$TMP"; continue; fi
+
+	TMP=`echo "$var" | sed -n 's/^--with-squids-libdir=\(.*\)$/\1/p'`
+	if [ "$TMP" ]; then SQUIDS_LIBDIR="$TMP"; continue; fi
+
+    TMP=`echo "$var" | sed -n 's/^--with-nusquids=\(.*\)$/\1/p'`
+	if [ "$TMP" ]; then
+		NUSQUIDS_INCDIR="${TMP}/include";
+		NUSQUIDS_LIBDIR="${TMP}/lib";
+	continue; fi
+
+	TMP=`echo "$var" | sed -n 's/^--with-nusquids-incdir=\(.*\)$/\1/p'`
+	if [ "$TMP" ]; then NUSQUIDS_INCDIR="$TMP"; continue; fi
+
+	TMP=`echo "$var" | sed -n 's/^--with-nusquids-libdir=\(.*\)$/\1/p'`
+	if [ "$TMP" ]; then NUSQUIDS_LIBDIR="$TMP"; continue; fi
+
+	echo "config.sh: Unknown or malformed option '$var'" 1>&2
+	exit 1
+done
+
+if [ "$GSL_INCDIR" -a "$GSL_LIBDIR" ]; then
+	echo "Checking manually specified GSL..."
+	if [ -d "$GSL_INCDIR/gsl" \
+         -a -e "$GSL_INCDIR/gsl/gsl_version.h" \
+         -a -d "$GSL_LIBDIR" \
+         -a -e "$GSL_LIBDIR/libgsl.a" ]; then
+		GSL_FOUND=1
+		GSL_CFLAGS="-I$GSL_INCDIR"
+		GSL_LDFLAGS="-L$GSL_LIBDIR -lgsl -lgslcblas -lm"
+	else
+		echo "Warning: manually specifed GSL not found; will attempt auto detection"
+	fi
+fi
+
+find_package gsl 1.15
+
+if [ "$HDF5_INCDIR" -a "$HDF5_LIBDIR" ]; then
+	echo "Checking manually specified HDF5..."
+	if [ -d "$HDF5_INCDIR" \
+         -a -e "$HDF5_INCDIR/H5version.h" \
+         -a -d "$HDF5_LIBDIR" \
+         -a -e "$HDF5_LIBDIR/libhdf5.a" \
+         -a -e "$HDF5_LIBDIR/libhdf5_hl.a" ]; then
+		HDF5_FOUND=1
+		HDF5_CFLAGS="-I$HDF5_INCDIR"
+		HDF5_LDFLAGS="-L$HDF5_LIBDIR -lhdf5 -lhdf5_hl"
+	else
+		echo "Warning: manually specifed HDF5 not found; will attempt auto detection"
+	fi
+fi
+
+#Do not use this due to broken Ubuntu package
+#find_package hdf5 1.8
+find_hdf5
+
+if [ "$SQUIDS_INCDIR" -a "$SQUIDS_LIBDIR" ]; then
+	echo "Checking manually specified SQUIDS..."
+	if [ -d "$SQUIDS_INCDIR" \
+         -a -d "$SQUIDS_LIBDIR" \
+         -a -e "$SQUIDS_LIBDIR/libSQuIDS.a" ]; then
+		SQUIDS_FOUND=1
+		SQUIDS_CFLAGS="-I$SQUIDS_INCDIR"
+		SQUIDS_LDFLAGS="-L$SQUIDS_LIBDIR -lSQuIDS"
+	else
+		echo "Warning: manually specifed SQUIDS not found; will attempt auto detection"
+	fi
+fi
+
+find_package squids 1.2
+
+if [ "$NUSQUIDS_INCDIR" -a "$NUSQUIDS_LIBDIR" ]; then
+	echo "Checking manually specified nuSQUIDS..."
+	if [ -d "$NUSQUIDS_INCDIR" \
+         -a -d "$NUSQUIDS_LIBDIR" \
+         -a -e "$NUSQUIDS_LIBDIR/libnuSQuIDS.a" ]; then
+		NUSQUIDS_FOUND=1
+		NUSQUIDS_CFLAGS="-I$NUSQUIDS_INCDIR"
+		NUSQUIDS_LDFLAGS="-L$NUSQUIDS_LIBDIR -lSQuIDS"
+	else
+		echo "Warning: manually specifed NUSQUIDS not found; will attempt auto detection"
+	fi
+fi
+
+find_package nusquids 1.10
+
+ensure_found gsl
+ensure_found hdf5
+ensure_found squids
+ensure_found nusquids
+
+if [ ! -d ./build/ ]; then
+    mkdir build;
+fi
+if [ ! -d ./lib/ ]; then
+    mkdir lib;
+fi
+
+
+echo "prefix=$PREFIX" > lib/cudanusquids.pc
+echo '
+libdir=${prefix}/lib
+includedir=${prefix}/inc
+Name: CUDAnuSQuIDS
+Description: A CUDA implementation of nuSQuIDS for atmospheric neutrinos.
+URL: https://github.com/fkallen/CUDAnuSQuIDS' >> lib/cudanusquids.pc
+echo "Version: $VERSION" >> lib/cudanusquids.pc
+echo 'Requires: gsl >= 1.15 hdf5 >= 1.8 squids >= 1.2.0 nusquids >= 1.10.0
+Libs: -L${libdir} -lcudanusquids
+Cflags: -I${includedir}
+' >> lib/cudanusquids.pc
+
+
+echo $PREFIX > .PREFIX
+echo $NUSQUIDS_INCDIR > .NUSQUIDS_INCDIR
+echo $NUSQUIDS_LIBDIR > .NUSQUIDS_LIBDIR
+echo $SQUIDS_INCDIR > .SQUIDS_INCDIR
+echo $SQUIDS_LIBDIR > .SQUIDS_LIBDIR
+echo $HDF5_INCDIR > .HDF5_INCDIR
+echo $HDF5_LIBDIR > .HDF5_LIBDIR
+echo $GSL_INCDIR > .GSL_INCDIR
+echo $GSL_LIBDIR > .GSL_LIBDIR
+
+mypath=`pwd`
+echo "#ifndef EXAMPLEPATH
+#define EXAMPLEPATH
+#include <string>
+std::string EXAMPLE_DATA_PATH=\"$mypath/examples/data\";
+#endif
+" > examples/path.h
+
+echo "Done."
+echo "To build library, run make"
