@@ -25,6 +25,10 @@ along with CUDAnuSQuIDS.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace cudanusquids{
 
+    /*
+        GPU cross sections.
+    */
+
     struct InteractionStructure{
         std::vector<double> dNdE_CC; // size s1
         std::vector<double> dNdE_NC; // size s1

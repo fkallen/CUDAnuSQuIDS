@@ -27,6 +27,8 @@ namespace cudanusquids{
 		struct Flags{
 			bool useCoherentRhoTerms = false;
 			bool useNonCoherentRhoTerms = false;
+			bool useInteractionsRhoTerms = false;
+			bool canUseInteractions = false;
 			bool useNCInteractions = false;
 			bool useTauRegeneration = false;
 			bool useGlashowResonance = false;
@@ -37,6 +39,7 @@ namespace cudanusquids{
 
 	namespace ode{
 
+        //add additional implementations here
 		enum class StepperType{
             RK4
         };

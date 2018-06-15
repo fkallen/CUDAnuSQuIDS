@@ -1,0 +1,132 @@
+\hypertarget{structcudanusquids_1_1PhysicsOps}{}\section{cudanusquids\+:\+:Physics\+Ops Class Reference}
+\label{structcudanusquids_1_1PhysicsOps}\index{cudanusquids\+::\+Physics\+Ops@{cudanusquids\+::\+Physics\+Ops}}
+
+
+Defines the physical operators used for simulation.  
+
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+{\footnotesize template$<$class Physics $>$ }\\D\+E\+V\+I\+C\+E\+Q\+U\+A\+L\+I\+F\+I\+ER void \hyperlink{structcudanusquids_1_1PhysicsOps_a4510392b0c1d86a3221289bf6da23958}{add\+To\+Prederive} (\hyperlink{structcudanusquids_1_1Physics}{Physics} \&base, double time) const \hypertarget{structcudanusquids_1_1PhysicsOps_a4510392b0c1d86a3221289bf6da23958}{}\label{structcudanusquids_1_1PhysicsOps_a4510392b0c1d86a3221289bf6da23958}
+
+\begin{DoxyCompactList}\small\item\em Perform custom updates before a derivation step. \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Physics $>$ }\\D\+E\+V\+I\+C\+E\+Q\+U\+A\+L\+I\+F\+I\+ER void \hyperlink{structcudanusquids_1_1PhysicsOps_af924f96f9ad6604eca1ed9d579bf1acb}{H0} (const \hyperlink{structcudanusquids_1_1Physics}{Physics} \&base, double out\mbox{[}$\,$\mbox{]}, int index\+\_\+rho, int index\+\_\+energy) const 
+\begin{DoxyCompactList}\small\item\em Calculate time-\/independent part of the Hamiltonian. \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Physics $>$ }\\D\+E\+V\+I\+C\+E\+Q\+U\+A\+L\+I\+F\+I\+ER void \hyperlink{structcudanusquids_1_1PhysicsOps_a3cc24a1183d37f69c1a0ebf4e5e0dea4}{HI} (const \hyperlink{structcudanusquids_1_1Physics}{Physics} \&base, double out\mbox{[}$\,$\mbox{]}, int index\+\_\+rho, int index\+\_\+energy) const 
+\begin{DoxyCompactList}\small\item\em Calculate time-\/dependent part of the Hamiltonian. \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Physics $>$ }\\D\+E\+V\+I\+C\+E\+Q\+U\+A\+L\+I\+F\+I\+ER void \hyperlink{structcudanusquids_1_1PhysicsOps_a15b807dff23fee0169712406e2e16a1d}{Gamma\+Rho} (const \hyperlink{structcudanusquids_1_1Physics}{Physics} \&base, double out\mbox{[}$\,$\mbox{]}, int index\+\_\+rho, int index\+\_\+energy) const 
+\begin{DoxyCompactList}\small\item\em Calculate absorbtion and attenuation. \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Physics $>$ }\\D\+E\+V\+I\+C\+E\+Q\+U\+A\+L\+I\+F\+I\+ER void \hyperlink{structcudanusquids_1_1PhysicsOps_acd4454bff2fa6824145b5cd19d2d0ecf}{Interactions\+Rho} (const \hyperlink{structcudanusquids_1_1Physics}{Physics} \&base, double out\mbox{[}$\,$\mbox{]}, int index\+\_\+rho, int index\+\_\+energy) const 
+\begin{DoxyCompactList}\small\item\em Calculate neutrino interactions. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Defines the physical operators used for simulation. 
+
+\subsection{Member Function Documentation}
+\index{cudanusquids\+::\+Physics\+Ops@{cudanusquids\+::\+Physics\+Ops}!Gamma\+Rho@{Gamma\+Rho}}
+\index{Gamma\+Rho@{Gamma\+Rho}!cudanusquids\+::\+Physics\+Ops@{cudanusquids\+::\+Physics\+Ops}}
+\subsubsection[{\texorpdfstring{Gamma\+Rho(const Physics \&base, double out[], int index\+\_\+rho, int index\+\_\+energy) const }{GammaRho(const Physics &base, double out[], int index_rho, int index_energy) const }}]{\setlength{\rightskip}{0pt plus 5cm}template$<$class Physics $>$ D\+E\+V\+I\+C\+E\+Q\+U\+A\+L\+I\+F\+I\+ER void cudanusquids\+::\+Physics\+Ops\+::\+Gamma\+Rho (
+\begin{DoxyParamCaption}
+\item[{const {\bf Physics} \&}]{base, }
+\item[{double}]{out\mbox{[}$\,$\mbox{]}, }
+\item[{int}]{index\+\_\+rho, }
+\item[{int}]{index\+\_\+energy}
+\end{DoxyParamCaption}
+) const\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{structcudanusquids_1_1PhysicsOps_a15b807dff23fee0169712406e2e16a1d}{}\label{structcudanusquids_1_1PhysicsOps_a15b807dff23fee0169712406e2e16a1d}
+
+
+Calculate absorbtion and attenuation. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em base} & The physics object to which this function is applied \\
+\hline
+{\em out} & Output array with length Physics\+::\+N\+F\+LV $\ast$ Physics\+::\+N\+F\+LV \\
+\hline
+{\em index\+\_\+rho} & 0, if neutrinotype != Both. Else, 0 = neutrino, 1 = antineutrino \\
+\hline
+{\em index\+\_\+energy} & Index of energy bin. \\
+\hline
+\end{DoxyParams}
+\index{cudanusquids\+::\+Physics\+Ops@{cudanusquids\+::\+Physics\+Ops}!H0@{H0}}
+\index{H0@{H0}!cudanusquids\+::\+Physics\+Ops@{cudanusquids\+::\+Physics\+Ops}}
+\subsubsection[{\texorpdfstring{H0(const Physics \&base, double out[], int index\+\_\+rho, int index\+\_\+energy) const }{H0(const Physics &base, double out[], int index_rho, int index_energy) const }}]{\setlength{\rightskip}{0pt plus 5cm}template$<$class Physics $>$ D\+E\+V\+I\+C\+E\+Q\+U\+A\+L\+I\+F\+I\+ER void cudanusquids\+::\+Physics\+Ops\+::\+H0 (
+\begin{DoxyParamCaption}
+\item[{const {\bf Physics} \&}]{base, }
+\item[{double}]{out\mbox{[}$\,$\mbox{]}, }
+\item[{int}]{index\+\_\+rho, }
+\item[{int}]{index\+\_\+energy}
+\end{DoxyParamCaption}
+) const\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{structcudanusquids_1_1PhysicsOps_af924f96f9ad6604eca1ed9d579bf1acb}{}\label{structcudanusquids_1_1PhysicsOps_af924f96f9ad6604eca1ed9d579bf1acb}
+
+
+Calculate time-\/independent part of the Hamiltonian. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em base} & The physics object to which this function is applied \\
+\hline
+{\em out} & Output array with length Physics\+::\+N\+F\+LV $\ast$ Physics\+::\+N\+F\+LV \\
+\hline
+{\em index\+\_\+rho} & 0, if neutrinotype != Both. Else, 0 = neutrino, 1 = antineutrino \\
+\hline
+{\em index\+\_\+energy} & Index of energy bin. \\
+\hline
+\end{DoxyParams}
+\index{cudanusquids\+::\+Physics\+Ops@{cudanusquids\+::\+Physics\+Ops}!HI@{HI}}
+\index{HI@{HI}!cudanusquids\+::\+Physics\+Ops@{cudanusquids\+::\+Physics\+Ops}}
+\subsubsection[{\texorpdfstring{H\+I(const Physics \&base, double out[], int index\+\_\+rho, int index\+\_\+energy) const }{HI(const Physics &base, double out[], int index_rho, int index_energy) const }}]{\setlength{\rightskip}{0pt plus 5cm}template$<$class Physics $>$ D\+E\+V\+I\+C\+E\+Q\+U\+A\+L\+I\+F\+I\+ER void cudanusquids\+::\+Physics\+Ops\+::\+HI (
+\begin{DoxyParamCaption}
+\item[{const {\bf Physics} \&}]{base, }
+\item[{double}]{out\mbox{[}$\,$\mbox{]}, }
+\item[{int}]{index\+\_\+rho, }
+\item[{int}]{index\+\_\+energy}
+\end{DoxyParamCaption}
+) const\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{structcudanusquids_1_1PhysicsOps_a3cc24a1183d37f69c1a0ebf4e5e0dea4}{}\label{structcudanusquids_1_1PhysicsOps_a3cc24a1183d37f69c1a0ebf4e5e0dea4}
+
+
+Calculate time-\/dependent part of the Hamiltonian. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em base} & The physics object to which this function is applied \\
+\hline
+{\em out} & Output array with length Physics\+::\+N\+F\+LV $\ast$ Physics\+::\+N\+F\+LV \\
+\hline
+{\em index\+\_\+rho} & 0, if neutrinotype != Both. Else, 0 = neutrino, 1 = antineutrino \\
+\hline
+{\em index\+\_\+energy} & Index of energy bin. \\
+\hline
+\end{DoxyParams}
+\index{cudanusquids\+::\+Physics\+Ops@{cudanusquids\+::\+Physics\+Ops}!Interactions\+Rho@{Interactions\+Rho}}
+\index{Interactions\+Rho@{Interactions\+Rho}!cudanusquids\+::\+Physics\+Ops@{cudanusquids\+::\+Physics\+Ops}}
+\subsubsection[{\texorpdfstring{Interactions\+Rho(const Physics \&base, double out[], int index\+\_\+rho, int index\+\_\+energy) const }{InteractionsRho(const Physics &base, double out[], int index_rho, int index_energy) const }}]{\setlength{\rightskip}{0pt plus 5cm}template$<$class Physics $>$ D\+E\+V\+I\+C\+E\+Q\+U\+A\+L\+I\+F\+I\+ER void cudanusquids\+::\+Physics\+Ops\+::\+Interactions\+Rho (
+\begin{DoxyParamCaption}
+\item[{const {\bf Physics} \&}]{base, }
+\item[{double}]{out\mbox{[}$\,$\mbox{]}, }
+\item[{int}]{index\+\_\+rho, }
+\item[{int}]{index\+\_\+energy}
+\end{DoxyParamCaption}
+) const\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{structcudanusquids_1_1PhysicsOps_acd4454bff2fa6824145b5cd19d2d0ecf}{}\label{structcudanusquids_1_1PhysicsOps_acd4454bff2fa6824145b5cd19d2d0ecf}
+
+
+Calculate neutrino interactions. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em base} & The physics object to which this function is applied \\
+\hline
+{\em out} & Output array with length Physics\+::\+N\+F\+LV $\ast$ Physics\+::\+N\+F\+LV \\
+\hline
+{\em index\+\_\+rho} & 0, if neutrinotype != Both. Else, 0 = neutrino, 1 = antineutrino \\
+\hline
+{\em index\+\_\+energy} & Index of energy bin. \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+include/cudanu\+S\+Qu\+I\+D\+S/physics.\+cuh\end{DoxyCompactItemize}

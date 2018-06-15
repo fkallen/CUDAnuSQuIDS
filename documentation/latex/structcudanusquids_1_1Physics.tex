@@ -1,0 +1,147 @@
+\hypertarget{structcudanusquids_1_1Physics}{}\section{cudanusquids\+:\+:Physics$<$ N\+F\+L\+V\+\_\+, body\+\_\+t, Op\+\_\+t $>$ Class Template Reference}
+\label{structcudanusquids_1_1Physics}\index{cudanusquids\+::\+Physics$<$ N\+F\+L\+V\+\_\+, body\+\_\+t, Op\+\_\+t $>$@{cudanusquids\+::\+Physics$<$ N\+F\+L\+V\+\_\+, body\+\_\+t, Op\+\_\+t $>$}}
+
+
+Handles the derivation of all bins of a specific neutrino path at a specific time.  
+
+
+\subsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+const double $\ast$ \hyperlink{structcudanusquids_1_1Physics_ae1e04dc7178c872da0f42c0115341f13}{energy\+List}\hypertarget{structcudanusquids_1_1Physics_ae1e04dc7178c872da0f42c0115341f13}{}\label{structcudanusquids_1_1Physics_ae1e04dc7178c872da0f42c0115341f13}
+
+\begin{DoxyCompactList}\small\item\em List of energy bins. length n\+\_\+energies. \end{DoxyCompactList}\item 
+const double $\ast$ \hyperlink{structcudanusquids_1_1Physics_aa57dd114ce74389b57e16379ebf64060}{cstates}\hypertarget{structcudanusquids_1_1Physics_aa57dd114ce74389b57e16379ebf64060}{}\label{structcudanusquids_1_1Physics_aa57dd114ce74389b57e16379ebf64060}
+
+\begin{DoxyCompactList}\small\item\em pointer to current state. during derivation, cstates == y, else cstates == states \end{DoxyCompactList}\item 
+const double $\ast$ \hyperlink{structcudanusquids_1_1Physics_ac18048b4896ce37db168be19538fbfde}{b0proj}
+\begin{DoxyCompactList}\small\item\em mass projectors. \end{DoxyCompactList}\item 
+const double $\ast$ \hyperlink{structcudanusquids_1_1Physics_a31d89b9634cc518ba1106717dd76de15}{b1proj}
+\begin{DoxyCompactList}\small\item\em flavor projectors. \end{DoxyCompactList}\item 
+const double $\ast$ \hyperlink{structcudanusquids_1_1Physics_a1a7778a672f21550ef4786acc2c01aab}{dm2}
+\begin{DoxyCompactList}\small\item\em Matrix of mass differences. \end{DoxyCompactList}\item 
+const double $\ast$ \hyperlink{structcudanusquids_1_1Physics_a8214408e1b93e64ccd5e0ccad05627bf}{H0\+\_\+array}
+\begin{DoxyCompactList}\small\item\em Time-\/independent hamiltonion for each energy bin. \end{DoxyCompactList}\item 
+const double $\ast$ \hyperlink{structcudanusquids_1_1Physics_af81e038971a9c70768911241647b73f5}{delE}
+\begin{DoxyCompactList}\small\item\em Energy difference between the energy bins. \end{DoxyCompactList}\item 
+double $\ast$ \hyperlink{structcudanusquids_1_1Physics_ae9ef595d9cbb5003a19c3c6afce673f8}{states}
+\begin{DoxyCompactList}\small\item\em Neutrino states. \end{DoxyCompactList}\item 
+double $\ast$ \hyperlink{structcudanusquids_1_1Physics_a1e8bf327f8744c94ed63272041b41d34}{evol\+B1proj}
+\begin{DoxyCompactList}\small\item\em Flavor projectors in the interaction picture. \end{DoxyCompactList}\item 
+double $\ast$ \hyperlink{structcudanusquids_1_1Physics_a6a86acb042107ec61f397148f58ebd3b}{fluxes}
+\begin{DoxyCompactList}\small\item\em The current neutrino fluxes. \end{DoxyCompactList}\item 
+void $\ast$$\ast$ \hyperlink{structcudanusquids_1_1Physics_a5a146906f0901a0493a6d0ad70b6f67d}{additional\+Data}\hypertarget{structcudanusquids_1_1Physics_a5a146906f0901a0493a6d0ad70b6f67d}{}\label{structcudanusquids_1_1Physics_a5a146906f0901a0493a6d0ad70b6f67d}
+
+\begin{DoxyCompactList}\small\item\em user-\/defined arrays specified via \hyperlink{structcudanusquids_1_1ParameterObject_a1c4d9b3219f1a6e563a7c79920148369}{Parameter\+Object\+::register\+Additional\+Data} \end{DoxyCompactList}\item 
+double \hyperlink{structcudanusquids_1_1Physics_a64f9aacfcfe1e99356fcc6bde3d38ae2}{density}\hypertarget{structcudanusquids_1_1Physics_a64f9aacfcfe1e99356fcc6bde3d38ae2}{}\label{structcudanusquids_1_1Physics_a64f9aacfcfe1e99356fcc6bde3d38ae2}
+
+\begin{DoxyCompactList}\small\item\em The current density. \end{DoxyCompactList}\item 
+double \hyperlink{structcudanusquids_1_1Physics_abb998a60e41ecd017a3ea7e3f729f0ae}{electron\+Fraction}\hypertarget{structcudanusquids_1_1Physics_abb998a60e41ecd017a3ea7e3f729f0ae}{}\label{structcudanusquids_1_1Physics_abb998a60e41ecd017a3ea7e3f729f0ae}
+
+\begin{DoxyCompactList}\small\item\em The current electron fraction. \end{DoxyCompactList}\item 
+double \hyperlink{structcudanusquids_1_1Physics_a3778e9fa78cb1a4e999bceaca469bd4d}{t}\hypertarget{structcudanusquids_1_1Physics_a3778e9fa78cb1a4e999bceaca469bd4d}{}\label{structcudanusquids_1_1Physics_a3778e9fa78cb1a4e999bceaca469bd4d}
+
+\begin{DoxyCompactList}\small\item\em The current time. \end{DoxyCompactList}\item 
+int \hyperlink{structcudanusquids_1_1Physics_a07951f876d4f364a817222cb85a57aaf}{max\+\_\+n\+\_\+cosines}\hypertarget{structcudanusquids_1_1Physics_a07951f876d4f364a817222cb85a57aaf}{}\label{structcudanusquids_1_1Physics_a07951f876d4f364a817222cb85a57aaf}
+
+\begin{DoxyCompactList}\small\item\em maximum number of simultaneous paths \end{DoxyCompactList}\item 
+int \hyperlink{structcudanusquids_1_1Physics_a14e1d1807c009094fece720c8c133bfc}{n\+\_\+rhos}\hypertarget{structcudanusquids_1_1Physics_a14e1d1807c009094fece720c8c133bfc}{}\label{structcudanusquids_1_1Physics_a14e1d1807c009094fece720c8c133bfc}
+
+\begin{DoxyCompactList}\small\item\em Number of neutrino types. n\+\_\+rhos = 2 if neutrino\+Type == both, else n\+\_\+rhos = 1. \end{DoxyCompactList}\item 
+int \hyperlink{structcudanusquids_1_1Physics_a5510fc156904989b574ef8728ffc66b9}{n\+\_\+energies}\hypertarget{structcudanusquids_1_1Physics_a5510fc156904989b574ef8728ffc66b9}{}\label{structcudanusquids_1_1Physics_a5510fc156904989b574ef8728ffc66b9}
+
+\begin{DoxyCompactList}\small\item\em Number of energy bins. \end{DoxyCompactList}\item 
+int \hyperlink{structcudanusquids_1_1Physics_ae187b9d09cc0ab3ae25467d19dc295f2}{index\+In\+Batch}\hypertarget{structcudanusquids_1_1Physics_ae187b9d09cc0ab3ae25467d19dc295f2}{}\label{structcudanusquids_1_1Physics_ae187b9d09cc0ab3ae25467d19dc295f2}
+
+\begin{DoxyCompactList}\small\item\em The cosine bin local to the current batch. index\+In\+Batch $<$ max\+\_\+n\+\_\+cosines. \end{DoxyCompactList}\item 
+int \hyperlink{structcudanusquids_1_1Physics_a67cfd659f0d455b1df4d8a9305a6c9e0}{global\+Path\+Id}\hypertarget{structcudanusquids_1_1Physics_a67cfd659f0d455b1df4d8a9305a6c9e0}{}\label{structcudanusquids_1_1Physics_a67cfd659f0d455b1df4d8a9305a6c9e0}
+
+\begin{DoxyCompactList}\small\item\em The cosine bin. \end{DoxyCompactList}\item 
+Body\+Type \hyperlink{structcudanusquids_1_1Physics_a245c02808bbcd68274c72b5e72d8b6b9}{body}\hypertarget{structcudanusquids_1_1Physics_a245c02808bbcd68274c72b5e72d8b6b9}{}\label{structcudanusquids_1_1Physics_a245c02808bbcd68274c72b5e72d8b6b9}
+
+\begin{DoxyCompactList}\small\item\em The body. \end{DoxyCompactList}\item 
+Body\+Type\+::\+Track \hyperlink{structcudanusquids_1_1Physics_a6a1d16a0234d70062bcc630fb1b2159f}{track}\hypertarget{structcudanusquids_1_1Physics_a6a1d16a0234d70062bcc630fb1b2159f}{}\label{structcudanusquids_1_1Physics_a6a1d16a0234d70062bcc630fb1b2159f}
+
+\begin{DoxyCompactList}\small\item\em The track. \end{DoxyCompactList}\item 
+Interaction\+Structure\+Gpu \hyperlink{structcudanusquids_1_1Physics_ad9aaf348792e7aa5471022fb300bfbc8}{intstruct}\hypertarget{structcudanusquids_1_1Physics_ad9aaf348792e7aa5471022fb300bfbc8}{}\label{structcudanusquids_1_1Physics_ad9aaf348792e7aa5471022fb300bfbc8}
+
+\begin{DoxyCompactList}\small\item\em Cross-\/section lookup table. \end{DoxyCompactList}\item 
+Interaction\+State\+Gpu \hyperlink{structcudanusquids_1_1Physics_aae2f0d6e7b8d48c134f68079cd4a33f1}{intstate}\hypertarget{structcudanusquids_1_1Physics_aae2f0d6e7b8d48c134f68079cd4a33f1}{}\label{structcudanusquids_1_1Physics_aae2f0d6e7b8d48c134f68079cd4a33f1}
+
+\begin{DoxyCompactList}\small\item\em Inverse interaction lengths lookup table. \end{DoxyCompactList}\item 
+nusquids\+::\+Basis \hyperlink{structcudanusquids_1_1Physics_ad9db1e8493c87938aa3d728d30673e9c}{basis}\hypertarget{structcudanusquids_1_1Physics_ad9db1e8493c87938aa3d728d30673e9c}{}\label{structcudanusquids_1_1Physics_ad9db1e8493c87938aa3d728d30673e9c}
+
+\begin{DoxyCompactList}\small\item\em Basis of states. (mass or interaction) \end{DoxyCompactList}\item 
+nusquids\+::\+Neutrino\+Type \hyperlink{structcudanusquids_1_1Physics_a6ff05433589c8acf94c73131d001f99a}{neutrino\+Type}\hypertarget{structcudanusquids_1_1Physics_a6ff05433589c8acf94c73131d001f99a}{}\label{structcudanusquids_1_1Physics_a6ff05433589c8acf94c73131d001f99a}
+
+\begin{DoxyCompactList}\small\item\em Neutrino\+Type. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\subsubsection*{template$<$int N\+F\+L\+V\+\_\+, class body\+\_\+t, class Op\+\_\+t$>$\\*
+class cudanusquids\+::\+Physics$<$ N\+F\+L\+V\+\_\+, body\+\_\+t, Op\+\_\+t $>$}
+
+Handles the derivation of all bins of a specific neutrino path at a specific time. 
+
+\subsection{Member Data Documentation}
+\index{cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}!b0proj@{b0proj}}
+\index{b0proj@{b0proj}!cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}}
+\subsubsection[{\texorpdfstring{b0proj}{b0proj}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+\_\+, class body\+\_\+t , class Op\+\_\+t $>$ const double$\ast$ {\bf cudanusquids\+::\+Physics}$<$ N\+F\+L\+V\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::b0proj}\hypertarget{structcudanusquids_1_1Physics_ac18048b4896ce37db168be19538fbfde}{}\label{structcudanusquids_1_1Physics_ac18048b4896ce37db168be19538fbfde}
+
+
+mass projectors. 
+
+density matrix, N\+F\+LV x N\+F\+LV. The i-\/th entry for mass basis f is b0proj\mbox{[}f + b0offset $\ast$ i\mbox{]}; \index{cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}!b1proj@{b1proj}}
+\index{b1proj@{b1proj}!cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}}
+\subsubsection[{\texorpdfstring{b1proj}{b1proj}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+\_\+, class body\+\_\+t , class Op\+\_\+t $>$ const double$\ast$ {\bf cudanusquids\+::\+Physics}$<$ N\+F\+L\+V\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::b1proj}\hypertarget{structcudanusquids_1_1Physics_a31d89b9634cc518ba1106717dd76de15}{}\label{structcudanusquids_1_1Physics_a31d89b9634cc518ba1106717dd76de15}
+
+
+flavor projectors. 
+
+density matrix, N\+F\+LV x N\+F\+LV. The i-\/th entry for flavor basis f with index\+\_\+rho is b1proj\mbox{[}index\+\_\+rho $\ast$ N\+F\+LV + flv + i $\ast$ b1offset\mbox{]} \index{cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}!delE@{delE}}
+\index{delE@{delE}!cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}}
+\subsubsection[{\texorpdfstring{delE}{delE}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+\_\+, class body\+\_\+t , class Op\+\_\+t $>$ const double$\ast$ {\bf cudanusquids\+::\+Physics}$<$ N\+F\+L\+V\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::delE}\hypertarget{structcudanusquids_1_1Physics_af81e038971a9c70768911241647b73f5}{}\label{structcudanusquids_1_1Physics_af81e038971a9c70768911241647b73f5}
+
+
+Energy difference between the energy bins. 
+
+Length n\+\_\+energies. delE\mbox{[}i+1\mbox{]} = energy\+List\mbox{[}i+1\mbox{]} -\/ energy\+List\mbox{[}i\mbox{]}, delE\mbox{[}0\mbox{]} = 0.\+0 \index{cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}!dm2@{dm2}}
+\index{dm2@{dm2}!cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}}
+\subsubsection[{\texorpdfstring{dm2}{dm2}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+\_\+, class body\+\_\+t , class Op\+\_\+t $>$ const double$\ast$ {\bf cudanusquids\+::\+Physics}$<$ N\+F\+L\+V\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::dm2}\hypertarget{structcudanusquids_1_1Physics_a1a7778a672f21550ef4786acc2c01aab}{}\label{structcudanusquids_1_1Physics_a1a7778a672f21550ef4786acc2c01aab}
+
+
+Matrix of mass differences. 
+
+density matrix, N\+F\+LV x N\+F\+LV \index{cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}!evol\+B1proj@{evol\+B1proj}}
+\index{evol\+B1proj@{evol\+B1proj}!cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}}
+\subsubsection[{\texorpdfstring{evol\+B1proj}{evolB1proj}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+\_\+, class body\+\_\+t , class Op\+\_\+t $>$ double$\ast$ {\bf cudanusquids\+::\+Physics}$<$ N\+F\+L\+V\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::evol\+B1proj}\hypertarget{structcudanusquids_1_1Physics_a1e8bf327f8744c94ed63272041b41d34}{}\label{structcudanusquids_1_1Physics_a1e8bf327f8744c94ed63272041b41d34}
+
+
+Flavor projectors in the interaction picture. 
+
+density matrix, N\+F\+LV x N\+F\+LV. Get pointer to first element of specific density matrix via double$\ast$ evolb1data = get\+Pitched\+Element(evol\+B1proj, index\+\_\+rho $\ast$ N\+F\+LV $\ast$ N\+F\+LV $\ast$ N\+F\+LV + index\+\_\+flv $\ast$ N\+F\+LV $\ast$ N\+F\+LV, index\+\_\+energy, evol\+B1pitch); then get i-\/th matrix element with evolb1data\mbox{[}i $\ast$ evoloffset\mbox{]}; \index{cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}!fluxes@{fluxes}}
+\index{fluxes@{fluxes}!cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}}
+\subsubsection[{\texorpdfstring{fluxes}{fluxes}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+\_\+, class body\+\_\+t , class Op\+\_\+t $>$ double$\ast$ {\bf cudanusquids\+::\+Physics}$<$ N\+F\+L\+V\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::fluxes}\hypertarget{structcudanusquids_1_1Physics_a6a86acb042107ec61f397148f58ebd3b}{}\label{structcudanusquids_1_1Physics_a6a86acb042107ec61f397148f58ebd3b}
+
+
+The current neutrino fluxes. 
+
+Stores the current neutrino fluxes during a derivation step. Get pointer via double$\ast$ fluxptr = get\+Pitched\+Element(fluxes,index\+\_\+rho $\ast$ N\+F\+LV, flv $\ast$ flux\+Offset + index\+\_\+energy, flux\+Pitch) Then get flux with double flux = $\ast$fluxptr; \index{cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}!H0\+\_\+array@{H0\+\_\+array}}
+\index{H0\+\_\+array@{H0\+\_\+array}!cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}}
+\subsubsection[{\texorpdfstring{H0\+\_\+array}{H0_array}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+\_\+, class body\+\_\+t , class Op\+\_\+t $>$ const double$\ast$ {\bf cudanusquids\+::\+Physics}$<$ N\+F\+L\+V\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::H0\+\_\+array}\hypertarget{structcudanusquids_1_1Physics_a8214408e1b93e64ccd5e0ccad05627bf}{}\label{structcudanusquids_1_1Physics_a8214408e1b93e64ccd5e0ccad05627bf}
+
+
+Time-\/independent hamiltonion for each energy bin. 
+
+density matrix, N\+F\+LV x N\+F\+LV. Get pointer to first element of energy bin index\+\_\+energy via double$\ast$ h0data = get\+Pitched\+Element(\+H0\+\_\+array, 0, index\+\_\+energy, h0pitch); then get i-\/th matrix element with h0data\mbox{[}i $\ast$ h0offset\mbox{]}; \index{cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}!states@{states}}
+\index{states@{states}!cudanusquids\+::\+Physics@{cudanusquids\+::\+Physics}}
+\subsubsection[{\texorpdfstring{states}{states}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+\_\+, class body\+\_\+t , class Op\+\_\+t $>$ double$\ast$ {\bf cudanusquids\+::\+Physics}$<$ N\+F\+L\+V\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::states}\hypertarget{structcudanusquids_1_1Physics_ae9ef595d9cbb5003a19c3c6afce673f8}{}\label{structcudanusquids_1_1Physics_ae9ef595d9cbb5003a19c3c6afce673f8}
+
+
+Neutrino states. 
+
+density matrix, N\+F\+LV x N\+F\+LV. Get pointer to first element of density matrix of energy bin index\+\_\+energy and index\+\_\+rho via double$\ast$ statedata = get\+Pitched\+Element(cstates, index\+\_\+rho $\ast$ N\+F\+L\+V $\ast$ N\+F\+L\+V, index\+\_\+energy, states\+Pitch); then get i-\/th matrix element with statedata\mbox{[}i $\ast$ states\+Offset\mbox{]}; 
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+include/cudanu\+S\+Qu\+I\+D\+S/physics.\+cuh\end{DoxyCompactItemize}

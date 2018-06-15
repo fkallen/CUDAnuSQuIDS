@@ -48,10 +48,10 @@ namespace cudanusquids{
 
             double* h0data = getPitchedElement(H0_array, 0, index_energy, h0pitch);
 
-            double tmp[physics_t::NumNeu * physics_t::NumNeu];
+            double tmp[physics_t::NFLV * physics_t::NFLV];
             nsq[0].H0(tmp, 0, index_energy);
 
-	        for(size_t i = 0; i < physics_t::NumNeu * physics_t::NumNeu; ++i){
+	        for(size_t i = 0; i < physics_t::NFLV * physics_t::NFLV; ++i){
                 	h0data[i * h0offset] = tmp[i];
 	        }
         }

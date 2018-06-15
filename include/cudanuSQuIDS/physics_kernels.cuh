@@ -29,6 +29,14 @@ along with CUDAnuSQuIDS.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace cudanusquids{
 
+/*
+    This file contains the kernels to perform physical computations on the GPU.
+    The kernels assume that thread blocks are one-dimensional with blockDim.x > 0.
+    The kernels assume that thread blocks with the same blockIdx.y work on the same trajectory.
+
+    Most of the kernels simply call the appropriate function of the physics object for a specific path.
+*/
+
 
 /*
  *
@@ -118,11 +126,11 @@ void evolveKernel(physics_t* nsqs, size_t n_cosines,
 		double tbegin = nsq.get_track().getXBegin();
 		double tend = nsq.get_track().getXEnd();
 
-		size_t myworkspaceSize = ode::SolverGPU<Stepper>::getMinimumMemorySize(nsq.get_statesPitch(),physics_t::NumNeu*physics_t::NumNeu* nsq.get_n_rhos());
+		size_t myworkspaceSize = ode::SolverGPU<Stepper>::getMinimumMemorySize(nsq.get_statesPitch(),physics_t::NFLV*physics_t::NFLV* nsq.get_n_rhos());
 		double* myworkspace = solverworkspace + index_cosine * myworkspaceSize;
 
         ode::SolverGPU<Stepper> solver(myworkspace, nsq.get_states() ,
-		                nsq.get_statesPitch(),physics_t::NumNeu*physics_t::NumNeu* nsq.get_n_rhos(),
+		                nsq.get_statesPitch(),physics_t::NFLV*physics_t::NFLV* nsq.get_n_rhos(),
 		                nSteps, h, h_min, h_max,
 		                tbegin, tend,
 		                (void*)&nsq,
@@ -168,12 +176,12 @@ void setDerivationPointersKernel(const size_t* const activePaths, const size_t n
         const size_t index_cosine = activePaths[index_y];
 
 		const double* my_y = getPitchedElement(y,
-                                                index_cosine * nsq[index_cosine].get_n_rhos() * physics_t::NumNeu * physics_t::NumNeu,
+                                                index_cosine * nsq[index_cosine].get_n_rhos() * physics_t::NFLV * physics_t::NFLV,
                                                 0,
                                                 nsq[index_cosine].get_statesPitch());
 
 		double* my_y_derived = getPitchedElement(y_derived,
-                                                index_cosine * nsq[index_cosine].get_n_rhos() * physics_t::NumNeu * physics_t::NumNeu,
+                                                index_cosine * nsq[index_cosine].get_n_rhos() * physics_t::NFLV * physics_t::NFLV,
                                                 0,
                                                 nsq[index_cosine].get_statesPitch());
 
@@ -335,7 +343,8 @@ void deriveOscKernel(const size_t* const activePaths, const size_t nPaths,
 
 /*
  *
- * Wrapper functions for above kernels
+ * Wrapper functions for above kernels. The functions are asynchronous!
+ * The streams have to be synchronized manually after the call via cudaStreamSynchronize(stream);
  *
  */
 

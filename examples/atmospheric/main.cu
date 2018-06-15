@@ -38,13 +38,13 @@ along with CUDAnuSQuIDS.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include <vector>
 
-template<unsigned int NFLVS, unsigned int BATCH_SIZE_LIMIT>
-void run(std::shared_ptr<cudanusquids::ParameterObject>& params){
+template<unsigned int NFLVS>
+void run(std::shared_ptr<cudanusquids::ParameterObject>& params, const nusquids::marray<double,1>& cosineList, int batchsizeLimit){
 
     using Bodytype = cudanusquids::EarthAtm; // choose Earth with atmosphere as body
 
-    // At most BATCH_SIZE_LIMIT paths will be evolved in parallel per GPU. This can control resource usage such as GPU memory consumption.
-    cudanusquids::CudaNusquids<NFLVS, Bodytype, BATCH_SIZE_LIMIT> cudanus(params);
+    // At most BatchsizeLimit paths will be evolved in parallel per GPU. This can control resource usage such as GPU memory consumption.
+    cudanusquids::CudaNusquids<NFLVS, Bodytype> cudanus(params, batchsizeLimit);
 
     std::vector<Bodytype> gpuBodies(params->Get_DeviceIds().size());
     std::vector<typename Bodytype::Track> tracks;
@@ -62,8 +62,8 @@ void run(std::shared_ptr<cudanusquids::ParameterObject>& params){
     }
 
     //create tracks with cosine
-	for(size_t i = 0; i < params->getNumPaths(); i++){
-		tracks.emplace_back(params->getPathParameterList()[i]);
+	for(int i = 0; i < params->getNumPaths(); i++){
+		tracks.emplace_back(cosineList[i]);
 	}
 
 	cudanus.setTracks(tracks);
@@ -75,7 +75,7 @@ void run(std::shared_ptr<cudanusquids::ParameterObject>& params){
     TIMERSTOPCPU(evolve);
 
     // check that every path was solved successfully and print some stats;
-    for(size_t i = 0; i < params->getNumPaths(); i++){
+    for(int i = 0; i < params->getNumPaths(); i++){
 		/*
 		   members of RKstats:
             unsigned int steps; // number of required steps
@@ -86,19 +86,19 @@ void run(std::shared_ptr<cudanusquids::ParameterObject>& params){
 
         //check if successfully evolved, if not print message
         if(stats.status != cudanusquids::ode::Status::success)
-            std::cout << "cosine " << params->getPathParameterList()[i] << " failed after " << stats.steps << " steps." << std::endl;
+            std::cout << "cosine " << cosineList[i] << " failed after " << stats.steps << " steps." << std::endl;
     }
 
     TIMERSTARTCPU(fileoutput);
 
     std::ofstream out("out.txt");
     out << params->getNumPaths() << " " << params->GetNumE() << " " << params->GetNumRho() << " " << params->GetNumNeu() << '\n';
-    for(size_t flv = 0; flv < params->GetNumNeu(); flv++){
+    for(int flv = 0; flv < params->GetNumNeu(); flv++){
         out << "Flv " << flv << '\n';
-        for(size_t i = 0; i <params->getNumPaths(); i++){
-            out << "cos(th) = " << params->getPathParameterList()[i] << "\n";
-            for(size_t j = 0; j < params->GetNumE(); j++){
-                for(size_t k = 0; k < params->GetNumRho(); k++){
+        for(int i = 0; i <params->getNumPaths(); i++){
+            out << "cos(th) = " << cosineList[i] << "\n";
+            for(int j = 0; j < params->GetNumE(); j++){
+                for(int k = 0; k < params->GetNumRho(); k++){
 					// the return value is invalid if evolution was not successful.
                     const double val = cudanus.EvalFlavorAtNode(flv, i, k, j); CUERR;
                     out << std::setprecision(20) << val << " ";
@@ -118,18 +118,16 @@ void run(std::shared_ptr<cudanusquids::ParameterObject>& params){
 }
 
 int atmospheric(int argc, char** argv){
-    constexpr unsigned int BATCH_SIZE_LIMIT=2000;
-
     using Const = cudanusquids::Const;
 
 	double Emin=1.e0 * Const::GeV();
 	double Emax=1.e2 * Const::GeV();
-	unsigned int n_energies = 200;
+	int n_energies = 200;
 	double czmin = -1;
 	double czmax = 0;
-	unsigned int n_cosines = 200;
+	int n_cosines = 200;
 	nusquids::NeutrinoType neutrinoType = nusquids::NeutrinoType::both;
-	unsigned int n_neutrinos = 3;
+	int n_neutrinos = 3;
 	unsigned int nSteps = 2000; // nSteps=0 means adaptive step size mode
 
 	std::vector<int> usableDeviceIds{0}; //use device with id 0
@@ -151,8 +149,10 @@ int atmospheric(int argc, char** argv){
 	bool useTauRegeneration = false;
 	bool useGlashowResonance = false;
 
-	bool anyInteractions = useNonCoherentRhoTerms || useNCInteractions
+	bool useInteractionsRhoTerms = useNCInteractions
 				|| useTauRegeneration || useGlashowResonance;
+
+	bool anyInteractions = useNonCoherentRhoTerms || useInteractionsRhoTerms;
 
 	auto typeToName = [](nusquids::NeutrinoType t){
 			switch(t){
@@ -185,7 +185,7 @@ int atmospheric(int argc, char** argv){
 	std::cout << " ]" << std::endl;
 
 	std::shared_ptr<cudanusquids::ParameterObject> params
-        = std::make_shared<cudanusquids::ParameterObject>(cosineList, energyList,
+        = std::make_shared<cudanusquids::ParameterObject>(cosineList.size(), energyList,
                                                         n_neutrinos, neutrinoType,
                                                         anyInteractions);
 
@@ -194,6 +194,7 @@ int atmospheric(int argc, char** argv){
 	//enable / disable parts of the simulated physics
 	params->Set_IncludeOscillations(useOscillation);
 	params->Set_NonCoherentRhoTerms(useNonCoherentRhoTerms);
+	params->Set_InteractionsRhoTerms(useInteractionsRhoTerms);
 	params->Set_NCInteractions(useNCInteractions);
 	params->Set_TauRegeneration(useTauRegeneration);
 	params->Set_GlashowResonance(useGlashowResonance);
@@ -255,10 +256,10 @@ int atmospheric(int argc, char** argv){
 
     switch(n_neutrinos){
         case 3:{
-            run<3, BATCH_SIZE_LIMIT>(params);
+            run<3>(params, cosineList, 2000);
             break;}
         case 4:{
-            run<4, BATCH_SIZE_LIMIT>(params);
+            run<4>(params, cosineList, 2000);
             break;}
 		default: printf("error\n");
     }

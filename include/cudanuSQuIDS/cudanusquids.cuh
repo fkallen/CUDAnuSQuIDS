@@ -42,37 +42,72 @@ along with CUDAnuSQuIDS.  If not, see <http://www.gnu.org/licenses/>.
 #include <assert.h>
 
 namespace cudanusquids{
-	
-/*	
-	This is main class of CudaNusquids.
-	
-	NFLVS: number of neutrino flavors
-	body_t: body type
-	BATCH_SIZE_LIMIT: Upper limit to the maximum number of paths which are evolved in parallel. Can be used to control GPU memory usage.
-	Ops: The function object to use for calculation of the operators
-*/
 
-template<unsigned int NFLVS, class body_t, unsigned int BATCH_SIZE_LIMIT = 400, class Ops = PhysicsOps<NFLVS, body_t>>
+
+
+///\class CudaNusquids
+///\brief This is the main class of of the library.
+/// @param NFLVS_ Number of neutrino flavors
+/// @param body_t The body type which provides density lookup
+/// @param Op_t The operators for physics simulation. (optional, default behaviour provided by struct PhysicsOps)
+template<int NFLVS_, class body_t, class Op_t = PhysicsOps>
 class CudaNusquids{
+    template<int, class, class> friend class CudaNusquids;
+public:
+    static constexpr int NFLVS = NFLVS_;
+    using Body = body_t;
+    using Ops = Op_t;
+private:
+    using Track = typename Body::Track;
+    using Propagator_t = Propagator<NFLVS, Body, Ops>;
 
-	std::vector<body_t> bodies;
-	std::vector<typename body_t::Track> tracks;
-	std::vector<Propagator<NFLVS, body_t, BATCH_SIZE_LIMIT, Ops>> propagators;
+	std::vector<Body> bodies;
+	std::vector<Track> tracks;
+	std::vector<Propagator_t> propagators;
 	std::vector<std::vector<size_t>> cosineIndices;
-	std::vector<size_t> localCosineIndices;	
-	
+	std::vector<size_t> localCosineIndices;
+
     std::shared_ptr<InteractionStructure> intstruct;
 	std::shared_ptr<ParameterObject> parameterObject;
 
 	int nGpus;
+    bool bodiesAreSet = false;
+    bool tracksAreSet = false;
 
 	CudaNusquids(const CudaNusquids& other) = delete;
 	CudaNusquids& operator=(const CudaNusquids& other) = delete;
 public:
-	~CudaNusquids(){};
-	
-	//Construct CudaNusquids from ParameterObject
-	CudaNusquids(std::shared_ptr<ParameterObject>& params)
+
+    /// \brief Constructor to change body type.
+    ///
+    /// \details other will be moved to *this. other must not be accessed afterwards.
+    template<class Nus_t>
+    CudaNusquids(Nus_t& other){
+        static_assert(NFLVS == other.NFLVS, "Body conversion: NFLVS does not match");
+
+        for(auto& otherprop : other.propagators){
+            propagators.emplace_back(otherprop);
+        }
+
+		cosineIndices = std::move(other.cosineIndices);
+		localCosineIndices = std::move(other.localCosineIndices);
+		intstruct = std::move(other.intstruct);
+		parameterObject = std::move(other.parameterObject);
+
+        bodies.resize(parameterObject->Get_DeviceIds().size());
+
+		nGpus = other.nGpus;
+
+        bodiesAreSet = false;
+        tracksAreSet = false;
+    }
+
+    /// \brief Construct CudaNusquids from ParameterObject
+	///
+    /// \details batchsizeLimit determines the maximum number of neutrino paths, which are processed simultaneously per GPU.
+    /// If the number of paths is greater than batchsizeLimit, paths are processed in chunks of size batchsizeLimit
+    /// This effectively controls the GPU memory usage, since there only has to be enough memory to process batchsizeLimit paths
+	CudaNusquids(std::shared_ptr<ParameterObject>& params, int batchsizeLimit)
 		:  parameterObject(params){
 
 		if(!params) throw std::runtime_error("CudaNusquids::CudaNusquids: params are null");
@@ -91,16 +126,19 @@ public:
 		cosineIndices.resize(parameterObject->Get_DeviceIds().size());
 		localCosineIndices.resize(parameterObject->getNumPaths());
 
-		for(size_t icos = 0; icos < parameterObject->getNumPaths(); icos++){
+		for(int icos = 0; icos < parameterObject->getNumPaths(); icos++){
 
-			size_t deviceIndex = getCosineDeviceIndex(icos);
+			int deviceIndex = getCosineDeviceIndex(icos);
 
 			cosineIndices[deviceIndex].push_back(icos);
 			localCosineIndices[icos] = cosineIndices[deviceIndex].size() - 1;
 		}
 
 		for(size_t i = 0; i < parameterObject->Get_DeviceIds().size(); i++){
-			propagators.emplace_back(parameterObject->Get_DeviceIds()[i], cosineIndices[i].size(), parameterObject);
+			propagators.emplace_back(parameterObject->Get_DeviceIds()[i],
+                                    cosineIndices[i].size(),
+                                    batchsizeLimit,
+                                    parameterObject);
 		}
 
 		parameterObject->initializeProjectors();
@@ -110,11 +148,13 @@ public:
         initialFluxChanged();
         additionalDataChanged();
 	}
-	
+
+    /// \brief Move constructor
 	CudaNusquids(CudaNusquids&& other){
 			*this = other;
 	}
-	
+
+    /// \brief Move assignment operator
 	CudaNusquids& operator=(CudaNusquids&& other){
 		bodies = std::move(other.bodies);
 		tracks = std::move(other.tracks);
@@ -124,12 +164,17 @@ public:
 		intstruct = std::move(other.intstruct);
 		parameterObject = std::move(other.parameterObject);
 
+        bodiesAreSet = other.bodiesAreSet;
+        tracksAreSet = other.tracksAreSet;
 		nGpus = other.nGpus;
-	}	
 
-	// map cosine / track to gpu
-	size_t getCosineDeviceIndex(size_t index_path) const{
-		size_t id = 0;
+        other.bodiesAreSet = false;
+        other.tracksAreSet = false;
+	}
+
+	/// \brief Return device Id of GPU which processes the index_path-th path
+	int getCosineDeviceIndex(int index_path) const{
+		int id = 0;
 
 		// cyclic distribution. this creates a balanced work load per gpu if path lengths decrease / increase with index_path
 
@@ -138,48 +183,44 @@ public:
 		return id;
 	}
 
-	//Get expectation value
-	double EvalMassAtNode(size_t flavor, size_t index_path, size_t index_rho, size_t index_energy){
+	/// \brief Get expectation value in mass Basis
+	double EvalMassAtNode(int flavor, int index_path, int index_rho, int index_energy){
 
-		const size_t deviceIndex = getCosineDeviceIndex(index_path);
+		const int deviceIndex = getCosineDeviceIndex(index_path);
 
-		const size_t local_index_path = localCosineIndices[index_path];
+		const int local_index_path = localCosineIndices[index_path];
 
 		const double flux = propagators[deviceIndex].EvalMassAtNode(flavor, local_index_path, index_rho, index_energy);
 
 		return flux;
 	}
-	
-	//Get expectation value
-	double EvalFlavorAtNode(size_t flavor, size_t index_path, size_t index_rho, size_t index_energy){
 
-		const size_t deviceIndex = getCosineDeviceIndex(index_path);
+	/// \brief Get expectation value in flavor Basis
+	double EvalFlavorAtNode(int flavor, int index_path, int index_rho, int index_energy){
 
-		const size_t local_index_path = localCosineIndices[index_path];
+		const int deviceIndex = getCosineDeviceIndex(index_path);
+
+		const int local_index_path = localCosineIndices[index_path];
 
 		const double flux = propagators[deviceIndex].EvalFlavorAtNode(flavor, local_index_path, index_rho, index_energy);
 
 		return flux;
 	}
-	
-	
-	//Evolve all bins until end of path is reached
+
+
+    /// \brief Evolve neutrinos along the specified paths from path begin to path end
 	void evolve(){
+        if(!bodiesAreSet || !tracksAreSet){
+            throw std::runtime_error("tracks or bodies not set!");
+        }
 		// distribute cosineList, tracks among gpus
 		for(size_t i = 0; i < parameterObject->Get_DeviceIds().size(); i++){
-			std::vector<double> myCos(cosineIndices[i].size());
-			std::vector<typename body_t::Track> myTracks(cosineIndices[i].size());
-
-			// make list of cosine values for this gpu
-			std::transform(cosineIndices[i].begin(), cosineIndices[i].end(),
-							myCos.begin(),
-							[&](size_t icos){ return parameterObject->getPathParameterList()[icos]; });
+			std::vector<Track> myTracks(cosineIndices[i].size());
 
 			for(size_t c = 0; c < cosineIndices[i].size(); c++){
 				myTracks[c] = tracks[cosineIndices[i][c]];
 			}
 
-			propagators[i].setCosineList(myCos);
 			propagators[i].setTracks(myTracks);
 		}
 
@@ -199,37 +240,53 @@ public:
 			thread.join();
 	}
 
-	//notify CudaNusquids that mixing parameters in parameter object changed
+    /// \brief Notify a CudaNusquids instance that mixing parameters in parameter object changed
+	///
+    /// \details Needs to be called before CudaNusquids::evolve() after calls to
+    /// ParameterObject::Set_MixingAngle,
+    /// ParameterObject::Set_SquareMassDifference,
+    /// ParameterObject::Set_CPPhase
 	void mixingParametersChanged(){
 		for(auto& nus : propagators)
 			nus.mixingParametersChanged();
 	}
 
-	//notify CudaNusquids that simulation parameters which enable / disable physics in parameter object changed
+    /// \brief Notify a CudaNusquids instance that simulation parameters which enable / disable physics in parameter object changed
+	///
+    /// \details Needs to be called before CudaNusquids::evolve() after calls to
+    /// ParameterObject::Set_IncludeOscillations,
+    /// ParameterObject::Set_NonCoherentRhoTerms,
+    /// ParameterObject::Set_InteractionsRhoTerms
+    /// ParameterObject::Set_NCInteractions
+    /// ParameterObject::Set_TauRegeneration
+    /// ParameterObject::Set_GlashowResonance
 	void simulationFlagsChanged(){
-		if(parameterObject->GetUseInteractions() && !intstruct){
+		if(parameterObject->Get_CanUseInteractions() && !intstruct){
             intstruct = parameterObject->make_InteractionStructure();
 
     		for(size_t i = 0; i < parameterObject->Get_DeviceIds().size(); i++){
-    			propagators[i].intstructcpu = intstruct;
+    			propagators[i].setInteractionStructure(intstruct);
     		}
 		}
 		for(auto& nus : propagators)
 			nus.simulationFlagsChanged();
 	}
 
-	//notify CudaNusquids that initial flux in parameter object changed
+    /// \brief Notify a CudaNusquids instance that initial flux in parameter object changed
+	///
+    /// \details Needs to be called before CudaNusquids::evolve() after calls to
+    /// ParameterObject::setInitialFlux
     void initialFluxChanged(){
         const size_t fluxesPerCosine = parameterObject->GetNumRho() * parameterObject->GetNumE() * NFLVS;
 
 		// distribute flux, cosineList, tracks among gpus
-		for(size_t i = 0; i < parameterObject->Get_DeviceIds().size(); i++){
+		for(int i = 0; i < int(parameterObject->Get_DeviceIds().size()); i++){
 			std::vector<double> fluxForGpu(cosineIndices[i].size() * fluxesPerCosine);
 
 			auto iter = fluxForGpu.begin();
 
-			for(size_t icos = 0; icos < parameterObject->getNumPaths(); icos++){
-				size_t deviceIndex = getCosineDeviceIndex(icos);
+			for(int icos = 0; icos < parameterObject->getNumPaths(); icos++){
+				int deviceIndex = getCosineDeviceIndex(icos);
 				if(deviceIndex == i){
 					iter = std::copy(parameterObject->Get_InitialFlux().begin() + icos * fluxesPerCosine,
 								parameterObject->Get_InitialFlux().begin() + (icos + 1) * fluxesPerCosine,
@@ -241,33 +298,47 @@ public:
         }
     }
 
-    //notify CudaNusquids that additional data in parameter object changed
+    /// \brief Notify a CudaNusquids instance that additional data in parameter object changed
+	///
+    /// \details Needs to be called before CudaNusquids::evolve() after calls to
+    /// ParameterObject::registerAdditionalData
+    /// ParameterObject::clearAdditionalData
     void additionalDataChanged(){
         for(auto& nus : propagators)
 			nus.additionalDataChanged();
     }
 
-    //Set body for gpu deviceId. The deviceId must be identical to the one for which the body was created
-	void setBody(const body_t& body_, int deviceId){
+    /// \brief Set body for GPU with device id deviceId
+	///
+    /// \details The deviceId must be identical to the one for which the body was created
+	void setBody(const Body& body_, int deviceId){
 		auto it = std::find(parameterObject->Get_DeviceIds().begin(), parameterObject->Get_DeviceIds().end(), deviceId);
 		if(it == parameterObject->Get_DeviceIds().end())
 			throw std::runtime_error("CudaNusquids::setBody: deviceId " + std::to_string(deviceId) + " not specified in parameter object");
 		auto dist = std::distance(parameterObject->Get_DeviceIds().begin(), it);
 		bodies[dist] = body_;
 		propagators[dist].setBody(body_);
+
+        bodiesAreSet = true;
 	}
 
-	//set neutrino tracks. must be one track per path
-	void setTracks(const std::vector<typename body_t::Track>& tracks_){
-		if(tracks_.size() != parameterObject->getNumPaths())
+    /// \brief Set neutrino tracks. Must be one track per path
+	void setTracks(const std::vector<Track>& tracks_){
+		if(tracks_.size() != size_t(parameterObject->getNumPaths()))
 			throw std::runtime_error("CudaNusquids::setTracks error, must provide one track per cosine bin.");
 		tracks = tracks_;
+        tracksAreSet = true;
 	}
 
-	//get Runge-Kutta stats after evolution
-    ode::RKstats getRKstats(size_t index_path) const{
-        const size_t deviceIndex = getCosineDeviceIndex(index_path);
-		const size_t local_index_path = localCosineIndices[index_path];
+	/// \brief Get Runge-Kutta stats after evolution
+    ///
+    /// \details members of RKstats:
+    ///    unsigned int steps; // number of required steps
+    ///    unsigned int repeats; // number of repeated steps
+    ///    Status status; // success or failure
+    ode::RKstats getRKstats(int index_path) const{
+        const int deviceIndex = getCosineDeviceIndex(index_path);
+		const int local_index_path = localCosineIndices[index_path];
         return propagators[deviceIndex].getRKstats(local_index_path);
     }
 

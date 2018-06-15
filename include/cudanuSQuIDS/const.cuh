@@ -24,7 +24,7 @@ namespace cudanusquids{
 
 
 
-///Contains physical and mathematical constants
+//Contains physical and mathematical constants
 struct Const{
 
 	// mathematical constants //

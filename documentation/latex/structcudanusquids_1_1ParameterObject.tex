@@ -1,0 +1,246 @@
+\hypertarget{structcudanusquids_1_1ParameterObject}{}\section{cudanusquids\+:\+:Parameter\+Object Class Reference}
+\label{structcudanusquids_1_1ParameterObject}\index{cudanusquids\+::\+Parameter\+Object@{cudanusquids\+::\+Parameter\+Object}}
+
+
+Manages simulation parameters.  
+
+
+
+
+{\ttfamily \#include $<$parameterobject.\+hpp$>$}
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{structcudanusquids_1_1ParameterObject_ab827df940ce3b528848a2ea6d5da45a4}{Parameter\+Object} (int num\+Paths, nusquids\+::marray$<$ double, 1 $>$ energylist, int n\+\_\+flvs, nusquids\+::\+Neutrino\+Type neutype, bool interactions, std\+::shared\+\_\+ptr$<$ nusquids\+::\+Neutrino\+Cross\+Sections $>$ ncs=nullptr)
+\begin{DoxyCompactList}\small\item\em Constructor. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_ad6d34eadcbe336d7d4a0cee88baad250}{Set\+\_\+\+Basis} (nusquids\+::\+Basis basis)\hypertarget{structcudanusquids_1_1ParameterObject_ad6d34eadcbe336d7d4a0cee88baad250}{}\label{structcudanusquids_1_1ParameterObject_ad6d34eadcbe336d7d4a0cee88baad250}
+
+\begin{DoxyCompactList}\small\item\em Set simulation basis. mass or interaction picture. \end{DoxyCompactList}\item 
+nusquids\+::\+Basis \hyperlink{structcudanusquids_1_1ParameterObject_a2ef518087ee701e0b84db97d4b675432}{get\+Basis} () const \hypertarget{structcudanusquids_1_1ParameterObject_a2ef518087ee701e0b84db97d4b675432}{}\label{structcudanusquids_1_1ParameterObject_a2ef518087ee701e0b84db97d4b675432}
+
+\begin{DoxyCompactList}\small\item\em Get simulation basis. \end{DoxyCompactList}\item 
+nusquids\+::\+Neutrino\+Type \hyperlink{structcudanusquids_1_1ParameterObject_a1e4a18e4e03a0e6ac7b2ddce3a46e3d2}{get\+Neutrino\+Type} () const \hypertarget{structcudanusquids_1_1ParameterObject_a1e4a18e4e03a0e6ac7b2ddce3a46e3d2}{}\label{structcudanusquids_1_1ParameterObject_a1e4a18e4e03a0e6ac7b2ddce3a46e3d2}
+
+\begin{DoxyCompactList}\small\item\em Get type of simulated neutrinos. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a645693f56eddd689c03638a2964471a0}{Set\+\_\+\+Mixing\+Angle} (unsigned int i, unsigned int j, double angle)\hypertarget{structcudanusquids_1_1ParameterObject_a645693f56eddd689c03638a2964471a0}{}\label{structcudanusquids_1_1ParameterObject_a645693f56eddd689c03638a2964471a0}
+
+\begin{DoxyCompactList}\small\item\em Set theta\+\_\+(i+1)\+\_\+(j+1) \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_ad1dbef9b9fac22a2ce4dd915a163ac0b}{Set\+\_\+\+Square\+Mass\+Difference} (unsigned int i, double diff)\hypertarget{structcudanusquids_1_1ParameterObject_ad1dbef9b9fac22a2ce4dd915a163ac0b}{}\label{structcudanusquids_1_1ParameterObject_ad1dbef9b9fac22a2ce4dd915a163ac0b}
+
+\begin{DoxyCompactList}\small\item\em Set m\+\_\+i -\/ m\+\_\+1. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a4845e30d03dadc06b2fb60214bb5fbdc}{Set\+\_\+\+C\+P\+Phase} (unsigned int i, unsigned int j, double angle)\hypertarget{structcudanusquids_1_1ParameterObject_a4845e30d03dadc06b2fb60214bb5fbdc}{}\label{structcudanusquids_1_1ParameterObject_a4845e30d03dadc06b2fb60214bb5fbdc}
+
+\begin{DoxyCompactList}\small\item\em Set delta\+\_\+cp\+\_\+(i+1)\+\_\+(j+1) \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_aa34064317183e0bf496448a9242531a0}{Set\+\_\+h\+\_\+min} (double opt)\hypertarget{structcudanusquids_1_1ParameterObject_aa34064317183e0bf496448a9242531a0}{}\label{structcudanusquids_1_1ParameterObject_aa34064317183e0bf496448a9242531a0}
+
+\begin{DoxyCompactList}\small\item\em Set minimum integration step size. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a38adbc8f7d32e0224448f38e8d703774}{Set\+\_\+h\+\_\+max} (double opt)\hypertarget{structcudanusquids_1_1ParameterObject_a38adbc8f7d32e0224448f38e8d703774}{}\label{structcudanusquids_1_1ParameterObject_a38adbc8f7d32e0224448f38e8d703774}
+
+\begin{DoxyCompactList}\small\item\em Set maximum integration step size. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a45db70e810f817409db10d29937ebb84}{Set\+\_\+h} (double opt)\hypertarget{structcudanusquids_1_1ParameterObject_a45db70e810f817409db10d29937ebb84}{}\label{structcudanusquids_1_1ParameterObject_a45db70e810f817409db10d29937ebb84}
+
+\begin{DoxyCompactList}\small\item\em Set begin integration step size for adaptive stepsize integration. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_abb5a1fd8843e40a071dd06cc5e200258}{Set\+\_\+rel\+\_\+error} (double opt)\hypertarget{structcudanusquids_1_1ParameterObject_abb5a1fd8843e40a071dd06cc5e200258}{}\label{structcudanusquids_1_1ParameterObject_abb5a1fd8843e40a071dd06cc5e200258}
+
+\begin{DoxyCompactList}\small\item\em Set maximum relative integration error. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a92d70356bfb68e0b7d162941b1ed74e0}{Set\+\_\+abs\+\_\+error} (double opt)\hypertarget{structcudanusquids_1_1ParameterObject_a92d70356bfb68e0b7d162941b1ed74e0}{}\label{structcudanusquids_1_1ParameterObject_a92d70356bfb68e0b7d162941b1ed74e0}
+
+\begin{DoxyCompactList}\small\item\em Set maximum absolute integration error. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a36ac77ff1ade922fee3716a6ae6fa4a3}{Set\+\_\+\+Num\+Steps} (unsigned int opt)\hypertarget{structcudanusquids_1_1ParameterObject_a36ac77ff1ade922fee3716a6ae6fa4a3}{}\label{structcudanusquids_1_1ParameterObject_a36ac77ff1ade922fee3716a6ae6fa4a3}
+
+\begin{DoxyCompactList}\small\item\em Set number of steps for fixed stepsize integration. \end{DoxyCompactList}\item 
+double \hyperlink{structcudanusquids_1_1ParameterObject_a9ae7f77fa2e0a1fc3103cca02993ba3d}{Get\+\_\+h\+\_\+min} () const \hypertarget{structcudanusquids_1_1ParameterObject_a9ae7f77fa2e0a1fc3103cca02993ba3d}{}\label{structcudanusquids_1_1ParameterObject_a9ae7f77fa2e0a1fc3103cca02993ba3d}
+
+\begin{DoxyCompactList}\small\item\em Get minimum integration step size. \end{DoxyCompactList}\item 
+double \hyperlink{structcudanusquids_1_1ParameterObject_a3789507d91b59e44f7d39b6618792416}{Get\+\_\+h\+\_\+max} () const \hypertarget{structcudanusquids_1_1ParameterObject_a3789507d91b59e44f7d39b6618792416}{}\label{structcudanusquids_1_1ParameterObject_a3789507d91b59e44f7d39b6618792416}
+
+\begin{DoxyCompactList}\small\item\em Get maximum integration step size. \end{DoxyCompactList}\item 
+double \hyperlink{structcudanusquids_1_1ParameterObject_ae97af1e60608dda2dd03dc3ba804480b}{Get\+\_\+h} () const \hypertarget{structcudanusquids_1_1ParameterObject_ae97af1e60608dda2dd03dc3ba804480b}{}\label{structcudanusquids_1_1ParameterObject_ae97af1e60608dda2dd03dc3ba804480b}
+
+\begin{DoxyCompactList}\small\item\em begin integration step size for adaptive stepsize integration \end{DoxyCompactList}\item 
+double \hyperlink{structcudanusquids_1_1ParameterObject_a0f9d32bd04745236faa43c7099818ab9}{Get\+\_\+rel\+\_\+error} () const \hypertarget{structcudanusquids_1_1ParameterObject_a0f9d32bd04745236faa43c7099818ab9}{}\label{structcudanusquids_1_1ParameterObject_a0f9d32bd04745236faa43c7099818ab9}
+
+\begin{DoxyCompactList}\small\item\em Set maximum relative integration error. \end{DoxyCompactList}\item 
+double \hyperlink{structcudanusquids_1_1ParameterObject_a0f668b060796141c7d47db0c2cc7aefb}{Get\+\_\+abs\+\_\+error} () const \hypertarget{structcudanusquids_1_1ParameterObject_a0f668b060796141c7d47db0c2cc7aefb}{}\label{structcudanusquids_1_1ParameterObject_a0f668b060796141c7d47db0c2cc7aefb}
+
+\begin{DoxyCompactList}\small\item\em Set maximum absolute integration error. \end{DoxyCompactList}\item 
+unsigned int \hyperlink{structcudanusquids_1_1ParameterObject_adc040f2980caf65a452fbc7934a1a650}{Get\+\_\+\+Num\+Steps} () const \hypertarget{structcudanusquids_1_1ParameterObject_adc040f2980caf65a452fbc7934a1a650}{}\label{structcudanusquids_1_1ParameterObject_adc040f2980caf65a452fbc7934a1a650}
+
+\begin{DoxyCompactList}\small\item\em Set number of steps for fixed stepsize integration. \end{DoxyCompactList}\item 
+nusquids\+::marray$<$ double, 1 $>$ \hyperlink{structcudanusquids_1_1ParameterObject_a48a9fd35978c1b73b13640a4ca51a107}{Get\+E\+Range} () const \hypertarget{structcudanusquids_1_1ParameterObject_a48a9fd35978c1b73b13640a4ca51a107}{}\label{structcudanusquids_1_1ParameterObject_a48a9fd35978c1b73b13640a4ca51a107}
+
+\begin{DoxyCompactList}\small\item\em Get list of neutrino energies. \end{DoxyCompactList}\item 
+const squids\+::\+S\+U\+\_\+vector \& \hyperlink{structcudanusquids_1_1ParameterObject_a9f2a23a88fe5e1300f2a44c8d4f90b48}{Get\+Flavor\+Proj} (unsigned int flv, unsigned int rho=0) const \hypertarget{structcudanusquids_1_1ParameterObject_a9f2a23a88fe5e1300f2a44c8d4f90b48}{}\label{structcudanusquids_1_1ParameterObject_a9f2a23a88fe5e1300f2a44c8d4f90b48}
+
+\begin{DoxyCompactList}\small\item\em Get flavor projector. If rho == 1, get projector for anti-\/neutrino. \end{DoxyCompactList}\item 
+const squids\+::\+S\+U\+\_\+vector \& \hyperlink{structcudanusquids_1_1ParameterObject_a6bddcbf30af44496c494233dea041628}{Get\+Mass\+Proj} (unsigned int flv, unsigned int rho=0) const \hypertarget{structcudanusquids_1_1ParameterObject_a6bddcbf30af44496c494233dea041628}{}\label{structcudanusquids_1_1ParameterObject_a6bddcbf30af44496c494233dea041628}
+
+\begin{DoxyCompactList}\small\item\em Get mass projector. If rho == 1, get projector for anti-\/neutrino. \end{DoxyCompactList}\item 
+const squids\+::\+Const \& \hyperlink{structcudanusquids_1_1ParameterObject_ab70411a4435ae82bc49adcd808572f96}{Get\+Params} () const \hypertarget{structcudanusquids_1_1ParameterObject_ab70411a4435ae82bc49adcd808572f96}{}\label{structcudanusquids_1_1ParameterObject_ab70411a4435ae82bc49adcd808572f96}
+
+\begin{DoxyCompactList}\small\item\em Get object with squids constants. \end{DoxyCompactList}\item 
+int \hyperlink{structcudanusquids_1_1ParameterObject_aec196ce166e7b5ac7ea1df956fc83b03}{Get\+NumE} () const \hypertarget{structcudanusquids_1_1ParameterObject_aec196ce166e7b5ac7ea1df956fc83b03}{}\label{structcudanusquids_1_1ParameterObject_aec196ce166e7b5ac7ea1df956fc83b03}
+
+\begin{DoxyCompactList}\small\item\em Get number of energy bins. \end{DoxyCompactList}\item 
+int \hyperlink{structcudanusquids_1_1ParameterObject_a3f1e69efc044351885235edb9a6c8823}{Get\+Num\+Neu} () const \hypertarget{structcudanusquids_1_1ParameterObject_a3f1e69efc044351885235edb9a6c8823}{}\label{structcudanusquids_1_1ParameterObject_a3f1e69efc044351885235edb9a6c8823}
+
+\begin{DoxyCompactList}\small\item\em Get number of flavors. \end{DoxyCompactList}\item 
+int \hyperlink{structcudanusquids_1_1ParameterObject_a4e504c64dfb65db404ed66c69e78a0f9}{Get\+Num\+Rho} () const \hypertarget{structcudanusquids_1_1ParameterObject_a4e504c64dfb65db404ed66c69e78a0f9}{}\label{structcudanusquids_1_1ParameterObject_a4e504c64dfb65db404ed66c69e78a0f9}
+
+\begin{DoxyCompactList}\small\item\em Get number of neutrino types. \end{DoxyCompactList}\item 
+int \hyperlink{structcudanusquids_1_1ParameterObject_a2ff62796c8bf600977c8a6d69c22c7b2}{get\+Num\+Paths} () const \hypertarget{structcudanusquids_1_1ParameterObject_a2ff62796c8bf600977c8a6d69c22c7b2}{}\label{structcudanusquids_1_1ParameterObject_a2ff62796c8bf600977c8a6d69c22c7b2}
+
+\begin{DoxyCompactList}\small\item\em Get number of paths. \end{DoxyCompactList}\item 
+bool \hyperlink{structcudanusquids_1_1ParameterObject_a4d39098c18ea1e088eea8d286259cbff}{Get\+\_\+\+Can\+Use\+Interactions} () const \hypertarget{structcudanusquids_1_1ParameterObject_a4d39098c18ea1e088eea8d286259cbff}{}\label{structcudanusquids_1_1ParameterObject_a4d39098c18ea1e088eea8d286259cbff}
+
+\begin{DoxyCompactList}\small\item\em Check if interactions can be used. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a9e75eed566861cab435b98341507ecf0}{Set\+\_\+\+Include\+Oscillations} (bool opt)\hypertarget{structcudanusquids_1_1ParameterObject_a9e75eed566861cab435b98341507ecf0}{}\label{structcudanusquids_1_1ParameterObject_a9e75eed566861cab435b98341507ecf0}
+
+\begin{DoxyCompactList}\small\item\em Enable / Disable neutrino oscillation. \end{DoxyCompactList}\item 
+bool \hyperlink{structcudanusquids_1_1ParameterObject_a97bd7b2ce228d0d96ccc884f4c60bb08}{Get\+\_\+\+Include\+Oscillations} () const \hypertarget{structcudanusquids_1_1ParameterObject_a97bd7b2ce228d0d96ccc884f4c60bb08}{}\label{structcudanusquids_1_1ParameterObject_a97bd7b2ce228d0d96ccc884f4c60bb08}
+
+\begin{DoxyCompactList}\small\item\em Check if neutrino oscillation is enabled. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a00e926b5315942a062a5b70d8670d237}{Set\+\_\+\+Non\+Coherent\+Rho\+Terms} (bool opt)\hypertarget{structcudanusquids_1_1ParameterObject_a00e926b5315942a062a5b70d8670d237}{}\label{structcudanusquids_1_1ParameterObject_a00e926b5315942a062a5b70d8670d237}
+
+\begin{DoxyCompactList}\small\item\em Enable / Disable non-\/coherent terms. \end{DoxyCompactList}\item 
+bool \hyperlink{structcudanusquids_1_1ParameterObject_a54ae829087e81d30bc922c57c97103aa}{Get\+\_\+\+Non\+Coherent\+Rho\+Terms} () const \hypertarget{structcudanusquids_1_1ParameterObject_a54ae829087e81d30bc922c57c97103aa}{}\label{structcudanusquids_1_1ParameterObject_a54ae829087e81d30bc922c57c97103aa}
+
+\begin{DoxyCompactList}\small\item\em Check if non-\/coherent terms are enabled. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_ad1b85181d815fcff54cb12b8b4f342fa}{Set\+\_\+\+Interactions\+Rho\+Terms} (bool opt)\hypertarget{structcudanusquids_1_1ParameterObject_ad1b85181d815fcff54cb12b8b4f342fa}{}\label{structcudanusquids_1_1ParameterObject_ad1b85181d815fcff54cb12b8b4f342fa}
+
+\begin{DoxyCompactList}\small\item\em Enable / Disable interaction terms. \end{DoxyCompactList}\item 
+bool \hyperlink{structcudanusquids_1_1ParameterObject_a71effd76b49ee99e45370d28c05f73ad}{Get\+\_\+\+Interactions\+Rho\+Terms} () const \hypertarget{structcudanusquids_1_1ParameterObject_a71effd76b49ee99e45370d28c05f73ad}{}\label{structcudanusquids_1_1ParameterObject_a71effd76b49ee99e45370d28c05f73ad}
+
+\begin{DoxyCompactList}\small\item\em Check if interaction terms are enabled. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a48fdc0ae44ad616da881d9f0039a5dc8}{Set\+\_\+\+N\+C\+Interactions} (bool opt)\hypertarget{structcudanusquids_1_1ParameterObject_a48fdc0ae44ad616da881d9f0039a5dc8}{}\label{structcudanusquids_1_1ParameterObject_a48fdc0ae44ad616da881d9f0039a5dc8}
+
+\begin{DoxyCompactList}\small\item\em Enable / Disable neutral current interactions. Will only be calculated if \hyperlink{structcudanusquids_1_1ParameterObject_a71effd76b49ee99e45370d28c05f73ad}{Get\+\_\+\+Interactions\+Rho\+Terms()} == true. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a365a78c6d394132eafa70beda0983684}{Set\+\_\+\+Tau\+Regeneration} (bool opt)\hypertarget{structcudanusquids_1_1ParameterObject_a365a78c6d394132eafa70beda0983684}{}\label{structcudanusquids_1_1ParameterObject_a365a78c6d394132eafa70beda0983684}
+
+\begin{DoxyCompactList}\small\item\em Enable / Disable Tau regeneration. Will only be calculated if \hyperlink{structcudanusquids_1_1ParameterObject_a71effd76b49ee99e45370d28c05f73ad}{Get\+\_\+\+Interactions\+Rho\+Terms()} == true. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_ae5ba20ebc5761236832f08b4c982e59c}{Set\+\_\+\+Glashow\+Resonance} (bool opt)\hypertarget{structcudanusquids_1_1ParameterObject_ae5ba20ebc5761236832f08b4c982e59c}{}\label{structcudanusquids_1_1ParameterObject_ae5ba20ebc5761236832f08b4c982e59c}
+
+\begin{DoxyCompactList}\small\item\em Enable / Disable Glashow resonance. Will only be calculated if \hyperlink{structcudanusquids_1_1ParameterObject_a71effd76b49ee99e45370d28c05f73ad}{Get\+\_\+\+Interactions\+Rho\+Terms()} == true. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a7f64d65de4ab8fa1ab8bc0a8d73ad4dd}{Set\+\_\+\+Progress\+Bar} (bool opt)\hypertarget{structcudanusquids_1_1ParameterObject_a7f64d65de4ab8fa1ab8bc0a8d73ad4dd}{}\label{structcudanusquids_1_1ParameterObject_a7f64d65de4ab8fa1ab8bc0a8d73ad4dd}
+
+\begin{DoxyCompactList}\small\item\em Enable / Disable progress bar. A Progressbar should only be used with a single G\+PU. \end{DoxyCompactList}\item 
+bool \hyperlink{structcudanusquids_1_1ParameterObject_a0bac24dbab92518b4a3a98f2987512de}{Get\+\_\+\+Progress\+Bar} () const \hypertarget{structcudanusquids_1_1ParameterObject_a0bac24dbab92518b4a3a98f2987512de}{}\label{structcudanusquids_1_1ParameterObject_a0bac24dbab92518b4a3a98f2987512de}
+
+\begin{DoxyCompactList}\small\item\em Check if progress bar is enabled. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a3391eb5997986b94c5c3888b2f70544c}{Set\+\_\+\+Device\+Ids} (const std\+::vector$<$ int $>$ \&ids)\hypertarget{structcudanusquids_1_1ParameterObject_a3391eb5997986b94c5c3888b2f70544c}{}\label{structcudanusquids_1_1ParameterObject_a3391eb5997986b94c5c3888b2f70544c}
+
+\begin{DoxyCompactList}\small\item\em Set device ids for G\+P\+Us that should be used for simulation. \end{DoxyCompactList}\item 
+const std\+::vector$<$ int $>$ \& \hyperlink{structcudanusquids_1_1ParameterObject_af182f2c95ddb6f03d308078a64a18867}{Get\+\_\+\+Device\+Ids} () const \hypertarget{structcudanusquids_1_1ParameterObject_af182f2c95ddb6f03d308078a64a18867}{}\label{structcudanusquids_1_1ParameterObject_af182f2c95ddb6f03d308078a64a18867}
+
+\begin{DoxyCompactList}\small\item\em Get device Ids. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a664a3baba5274873a96f23087dbaecb4}{Set\+\_\+\+Solver\+Type} (cudanusquids\+::\+Solver\+Type solver\+Type\+\_\+)\hypertarget{structcudanusquids_1_1ParameterObject_a664a3baba5274873a96f23087dbaecb4}{}\label{structcudanusquids_1_1ParameterObject_a664a3baba5274873a96f23087dbaecb4}
+
+\begin{DoxyCompactList}\small\item\em Set solver type. Either Version1 or Version2. \end{DoxyCompactList}\item 
+cudanusquids\+::\+Solver\+Type \hyperlink{structcudanusquids_1_1ParameterObject_afdac176277cb71683ba5bc9d2fd2ed51}{Get\+\_\+\+Solver\+Type} () const \hypertarget{structcudanusquids_1_1ParameterObject_afdac176277cb71683ba5bc9d2fd2ed51}{}\label{structcudanusquids_1_1ParameterObject_afdac176277cb71683ba5bc9d2fd2ed51}
+
+\begin{DoxyCompactList}\small\item\em Get solver type. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a6c87fe0035ad65250cbea4a818c40819}{Set\+\_\+\+Stepper\+Type} (cudanusquids\+::ode\+::\+Stepper\+Type stepper\+Type\+\_\+)\hypertarget{structcudanusquids_1_1ParameterObject_a6c87fe0035ad65250cbea4a818c40819}{}\label{structcudanusquids_1_1ParameterObject_a6c87fe0035ad65250cbea4a818c40819}
+
+\begin{DoxyCompactList}\small\item\em Set integration method. R\+K4 (4th order Runge-\/\+Kutta) \end{DoxyCompactList}\item 
+cudanusquids\+::ode\+::\+Stepper\+Type \hyperlink{structcudanusquids_1_1ParameterObject_aa6db5e6015edad7e24eee4ab51cb7f7d}{Get\+\_\+\+Stepper\+Type} () const \hypertarget{structcudanusquids_1_1ParameterObject_aa6db5e6015edad7e24eee4ab51cb7f7d}{}\label{structcudanusquids_1_1ParameterObject_aa6db5e6015edad7e24eee4ab51cb7f7d}
+
+\begin{DoxyCompactList}\small\item\em Get integration method. \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Func $>$ }\\void \hyperlink{structcudanusquids_1_1ParameterObject_a420592083eba134c1517f69fce11e170}{set\+Initial\+Flux} (Func flux\+Generator, nusquids\+::\+Basis fluxbasis\+\_\+)\hypertarget{structcudanusquids_1_1ParameterObject_a420592083eba134c1517f69fce11e170}{}\label{structcudanusquids_1_1ParameterObject_a420592083eba134c1517f69fce11e170}
+
+\begin{DoxyCompactList}\small\item\em Set initial neutrino flux from generator, specified in basis fluxbasis, either mass or flavor. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_aa6ddf842498f3507176ee3e291a23f92}{set\+Initial\+Flux} (const std\+::vector$<$ double $>$ \&initial\+Flux, nusquids\+::\+Basis fluxbasis)
+\begin{DoxyCompactList}\small\item\em Set initial neutrino flux from list, specified in basis fluxbasis, either mass or flavor. \end{DoxyCompactList}\item 
+const std\+::vector$<$ double $>$ \& \hyperlink{structcudanusquids_1_1ParameterObject_aded30b29a3a6ce5971e546caeb33c821}{Get\+\_\+\+Initial\+Flux} () const \hypertarget{structcudanusquids_1_1ParameterObject_aded30b29a3a6ce5971e546caeb33c821}{}\label{structcudanusquids_1_1ParameterObject_aded30b29a3a6ce5971e546caeb33c821}
+
+\begin{DoxyCompactList}\small\item\em Get initial neutrino flux list as it was set by set\+Initial\+Flux. \end{DoxyCompactList}\item 
+nusquids\+::\+Basis \hyperlink{structcudanusquids_1_1ParameterObject_acdc41e067bc0e80a5499bc621133837e}{Get\+\_\+\+Flux\+Basis} () const \hypertarget{structcudanusquids_1_1ParameterObject_acdc41e067bc0e80a5499bc621133837e}{}\label{structcudanusquids_1_1ParameterObject_acdc41e067bc0e80a5499bc621133837e}
+
+\begin{DoxyCompactList}\small\item\em Get flux basis as it was set by set\+Initial\+Flux. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a1c4d9b3219f1a6e563a7c79920148369}{register\+Additional\+Data} (size\+\_\+t size)
+\begin{DoxyCompactList}\small\item\em Create a G\+PU array of size bytes which can be accessed by custom physics operations. The array contents are left uninitialized. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_adbda5c690a7283179528fc0609459f90}{register\+Additional\+Data} (size\+\_\+t size, const char $\ast$data)
+\begin{DoxyCompactList}\small\item\em Create a G\+PU array of size bytes which can be accessed by custom physics operations size bytes are copied from data to the G\+PU array. \end{DoxyCompactList}\item 
+void \hyperlink{structcudanusquids_1_1ParameterObject_a70bad51407513e04ad2f542418be5915}{clear\+Additional\+Data} ()\hypertarget{structcudanusquids_1_1ParameterObject_a70bad51407513e04ad2f542418be5915}{}\label{structcudanusquids_1_1ParameterObject_a70bad51407513e04ad2f542418be5915}
+
+\begin{DoxyCompactList}\small\item\em Delete every G\+PU array created by register\+Additional\+Data. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Manages simulation parameters. 
+
+\subsection{Constructor \& Destructor Documentation}
+\index{cudanusquids\+::\+Parameter\+Object@{cudanusquids\+::\+Parameter\+Object}!Parameter\+Object@{Parameter\+Object}}
+\index{Parameter\+Object@{Parameter\+Object}!cudanusquids\+::\+Parameter\+Object@{cudanusquids\+::\+Parameter\+Object}}
+\subsubsection[{\texorpdfstring{Parameter\+Object(int num\+Paths, nusquids\+::marray$<$ double, 1 $>$ energylist, int n\+\_\+flvs, nusquids\+::\+Neutrino\+Type neutype, bool interactions, std\+::shared\+\_\+ptr$<$ nusquids\+::\+Neutrino\+Cross\+Sections $>$ ncs=nullptr)}{ParameterObject(int numPaths, nusquids::marray< double, 1 > energylist, int n_flvs, nusquids::NeutrinoType neutype, bool interactions, std::shared_ptr< nusquids::NeutrinoCrossSections > ncs=nullptr)}}]{\setlength{\rightskip}{0pt plus 5cm}cudanusquids\+::\+Parameter\+Object\+::\+Parameter\+Object (
+\begin{DoxyParamCaption}
+\item[{int}]{num\+Paths, }
+\item[{nusquids\+::marray$<$ double, 1 $>$}]{energylist, }
+\item[{int}]{n\+\_\+flvs, }
+\item[{nusquids\+::\+Neutrino\+Type}]{neutype, }
+\item[{bool}]{interactions, }
+\item[{std\+::shared\+\_\+ptr$<$ nusquids\+::\+Neutrino\+Cross\+Sections $>$}]{ncs = {\ttfamily nullptr}}
+\end{DoxyParamCaption}
+)}\hypertarget{structcudanusquids_1_1ParameterObject_ab827df940ce3b528848a2ea6d5da45a4}{}\label{structcudanusquids_1_1ParameterObject_ab827df940ce3b528848a2ea6d5da45a4}
+
+
+Constructor. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em num\+Paths} & Number of neutrino trajectories \\
+\hline
+{\em energylist} & List of neutrino energies \mbox{[}eV\mbox{]}. \\
+\hline
+{\em n\+\_\+flvs} & Number of neutrino flavors \\
+\hline
+{\em neutype} & neutrino,antineutrino, or both (simultaneous solution). \\
+\hline
+{\em interactions} & If interactions can be used. \\
+\hline
+{\em ncs} & Cross section object. (optional) \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\index{cudanusquids\+::\+Parameter\+Object@{cudanusquids\+::\+Parameter\+Object}!register\+Additional\+Data@{register\+Additional\+Data}}
+\index{register\+Additional\+Data@{register\+Additional\+Data}!cudanusquids\+::\+Parameter\+Object@{cudanusquids\+::\+Parameter\+Object}}
+\subsubsection[{\texorpdfstring{register\+Additional\+Data(size\+\_\+t size)}{registerAdditionalData(size_t size)}}]{\setlength{\rightskip}{0pt plus 5cm}void cudanusquids\+::\+Parameter\+Object\+::register\+Additional\+Data (
+\begin{DoxyParamCaption}
+\item[{size\+\_\+t}]{size}
+\end{DoxyParamCaption}
+)}\hypertarget{structcudanusquids_1_1ParameterObject_a1c4d9b3219f1a6e563a7c79920148369}{}\label{structcudanusquids_1_1ParameterObject_a1c4d9b3219f1a6e563a7c79920148369}
+
+
+Create a G\+PU array of size bytes which can be accessed by custom physics operations. The array contents are left uninitialized. 
+
+The additional G\+PU arrays are made available in member void$\ast$$\ast$ additional\+Data; of struct \hyperlink{structcudanusquids_1_1Physics}{Physics} additional\+Data\mbox{[}0\mbox{]} holds a pointer to the first registered G\+PU array, additional\+Data\mbox{[}1\mbox{]} holds a pointer to the second registered G\+PU array, and so on. The arrays are not exclusive to a specific path, but can be accessed by all neutrino paths. Thus, the arrays must be created large enough to fit the data for the maximum number of parallel simulated paths \index{cudanusquids\+::\+Parameter\+Object@{cudanusquids\+::\+Parameter\+Object}!register\+Additional\+Data@{register\+Additional\+Data}}
+\index{register\+Additional\+Data@{register\+Additional\+Data}!cudanusquids\+::\+Parameter\+Object@{cudanusquids\+::\+Parameter\+Object}}
+\subsubsection[{\texorpdfstring{register\+Additional\+Data(size\+\_\+t size, const char $\ast$data)}{registerAdditionalData(size_t size, const char *data)}}]{\setlength{\rightskip}{0pt plus 5cm}void cudanusquids\+::\+Parameter\+Object\+::register\+Additional\+Data (
+\begin{DoxyParamCaption}
+\item[{size\+\_\+t}]{size, }
+\item[{const char $\ast$}]{data}
+\end{DoxyParamCaption}
+)}\hypertarget{structcudanusquids_1_1ParameterObject_adbda5c690a7283179528fc0609459f90}{}\label{structcudanusquids_1_1ParameterObject_adbda5c690a7283179528fc0609459f90}
+
+
+Create a G\+PU array of size bytes which can be accessed by custom physics operations size bytes are copied from data to the G\+PU array. 
+
+The additional G\+PU arrays are made available in member void$\ast$$\ast$ additional\+Data; of struct \hyperlink{structcudanusquids_1_1Physics}{Physics} additional\+Data\mbox{[}0\mbox{]} holds a pointer to the first registered G\+PU array, additional\+Data\mbox{[}1\mbox{]} holds a pointer to the second registered G\+PU array, and so on. The arrays are not exclusive to a specific path, but can be accessed by all neutrino paths. Thus, the arrays must be created large enough to fit the data for the maximum number of parallel simulated paths \index{cudanusquids\+::\+Parameter\+Object@{cudanusquids\+::\+Parameter\+Object}!set\+Initial\+Flux@{set\+Initial\+Flux}}
+\index{set\+Initial\+Flux@{set\+Initial\+Flux}!cudanusquids\+::\+Parameter\+Object@{cudanusquids\+::\+Parameter\+Object}}
+\subsubsection[{\texorpdfstring{set\+Initial\+Flux(const std\+::vector$<$ double $>$ \&initial\+Flux, nusquids\+::\+Basis fluxbasis)}{setInitialFlux(const std::vector< double > &initialFlux, nusquids::Basis fluxbasis)}}]{\setlength{\rightskip}{0pt plus 5cm}void cudanusquids\+::\+Parameter\+Object\+::set\+Initial\+Flux (
+\begin{DoxyParamCaption}
+\item[{const std\+::vector$<$ double $>$ \&}]{initial\+Flux, }
+\item[{nusquids\+::\+Basis}]{fluxbasis}
+\end{DoxyParamCaption}
+)}\hypertarget{structcudanusquids_1_1ParameterObject_aa6ddf842498f3507176ee3e291a23f92}{}\label{structcudanusquids_1_1ParameterObject_aa6ddf842498f3507176ee3e291a23f92}
+
+
+Set initial neutrino flux from list, specified in basis fluxbasis, either mass or flavor. 
+
+initial\+Flux is flat array of dimensions \mbox{[}number of paths\mbox{]}\mbox{[}number of neutrino types\mbox{]}\mbox{[}number of energies\mbox{]}\mbox{[}number of flavors\mbox{]} 
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+include/cudanu\+S\+Qu\+I\+D\+S/parameterobject.\+hpp\end{DoxyCompactItemize}

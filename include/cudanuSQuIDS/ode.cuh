@@ -18,6 +18,10 @@ along with CUDAnuSQuIDS.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef CUDANUSQUIDS_ODE_CUH
 #define CUDANUSQUIDS_ODE_CUH
 
+/*
+    Every Runge-Kutta related include file
+*/
+
 
 #include <cudanuSQuIDS/solver2d.hpp>
 #include <cudanuSQuIDS/solvergpu.cuh>
@@ -26,6 +30,16 @@ along with CUDAnuSQuIDS.  If not, see <http://www.gnu.org/licenses/>.
 #include <cudanuSQuIDS/rk4.cuh>
 
 #include <cudanuSQuIDS/types.hpp>
+
+
+/* How to integrate more Runge Kutta steppers into CudaNusquids:
+
+   - include both the stepper for Version1 (2d) and the stepper for Version 2 in ode.cuh.
+   - in types.hpp, add new enumeration value to cudanusquids::ode::StepperType
+   - in propagator.cuh in struct PropagatorImpl, add case to switch statements in functions evolveVersion1 and evolveVersion2
+     to select the new enumeration value for the new Runge Kutta stepper
+*/
+
 
 
 

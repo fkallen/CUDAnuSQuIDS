@@ -34,8 +34,8 @@ LDFLAGS= $(HDF5_LDFLAGS) $(NUSQUIDS_LDFLAGS) $(SQUIDS_LDFLAGS) $(GSL_LDFLAGS) $(
 
 CPPFLAGS = -std=c++14
 
-CUDAARCH = -gencode arch=compute_60,code=sm_60 \
-           -gencode arch=compute_61,code=sm_61 \
+CUDAARCH = -gencode arch=compute_61,code=sm_61 \
+	   -gencode arch=compute_61,code=sm_61 \
 	   -gencode arch=compute_70,code=sm_70 \
 	   -gencode arch=compute_70,code=compute_70
 	   

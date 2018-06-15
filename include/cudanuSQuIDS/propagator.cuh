@@ -46,31 +46,20 @@ along with CUDAnuSQuIDS.  If not, see <http://www.gnu.org/licenses/>.
 #include <map>
 
 namespace cudanusquids{
-	
-	template<unsigned int NFLVS, class body_t, unsigned int BATCH_SIZE_LIMIT, class Ops>
+
+	template<int NFLVS, class body_t, class Ops>
 	class CudaNusquids;
 
+    struct PropagatorImpl{
 
-    template<unsigned int NFLVS, class body_t, unsigned int BATCH_SIZE_LIMIT = 400, class Ops = PhysicsOps<NFLVS, body_t>>
-    class Propagator{
-		friend class CudaNusquids<NFLVS, body_t, BATCH_SIZE_LIMIT, Ops>;
-
-        using MyPhysics = Physics<NFLVS, body_t, Ops>;
-
-        static_assert(BATCH_SIZE_LIMIT > 0, "BATCH_SIZE_LIMIT must be greater than zero");
-        static_assert(NFLVS == 3 || NFLVS == 4, "Propagator: NFLVS must be 3 or 4.");
-
-        static constexpr unsigned int susize = NFLVS * NFLVS;
+        int NFLVS = 3;
+        int susize = NFLVS * NFLVS;
 
         detail::EvalType previousEvalType = detail::EvalType::None;
 
+        std::shared_ptr<ParameterObject> parameterObject;
 
-		std::shared_ptr<ParameterObject> parameterObject;
-
-    // Data
-
-    //input data
-		std::vector<double> cosineList;
+        //input data
         std::vector<double> initialFlux;
 
     //final states
@@ -80,7 +69,6 @@ namespace cudanusquids{
         std::vector<double> results;
 
         unique_dev_ptr<double> energyListgpu;
-        unique_dev_ptr<double> cosineListgpu;
         unique_dev_ptr<double> initialFluxgpu;
         unique_dev_ptr<double> DM2datagpu;
         unique_dev_ptr<double> H0_arraygpu;
@@ -107,22 +95,18 @@ namespace cudanusquids{
         unique_dev_ptr<void*> additionalDataPointersGpu;
         std::vector<unique_dev_ptr<char>> additionalDatagpuvec;
 
-//body and tracks
-        body_t bodygpu;
-        unique_pinned_ptr<typename body_t::Track> tracks; // host array of device track pointers
-
-// memory pitch in bytes for energy dimension
+        // memory pitch in bytes for energy dimension
         size_t currentFluxesPitch;
         size_t h0pitch;
         size_t evolB1pitch;
         size_t statespitch;
 // distance between two consecutive elements of the same density matrix
-        size_t statesOffset;
-        size_t evolB1offset;
-        size_t h0offset;
-        size_t b0offset;
-        size_t b1offset;
-
+        int fluxOffset;
+		int h0offset;
+        int evolB1offset;
+        int statesOffset;
+        int b0offset;
+        int b1offset;
 
         int deviceId;
 
@@ -131,10 +115,10 @@ namespace cudanusquids{
         unique_dev_ptr<ode::RKstats> rkstatsgpu;
 
     // Problem dimensions
-        size_t n_cosines = 0;
+        int n_cosines = 0;
     // Maximum number of paths with parameterObject->GetNumE() energy nodes that can be calculated in parallel (hardware limit, e.g. available memory).
     //Larger problems will be batched
-        size_t max_n_cosines = 0;
+        int max_n_cosines = 0;
 
     // parameters which are used in the current derivation step
 
@@ -151,7 +135,7 @@ namespace cudanusquids{
 
     // gpu streams
 
-        static constexpr size_t nCopyStreams = 2;
+        static constexpr int nCopyStreams = 2;
 
         cudaStream_t updateTimeStream;
         cudaStream_t evolveProjectorsStream;
@@ -167,18 +151,17 @@ namespace cudanusquids{
 
         cudaStream_t copyStreams[nCopyStreams];
 
-        unique_dev_ptr<MyPhysics> nsqgpu; // device array of MyPhysics
-        unique_pinned_ptr<MyPhysics> nsqcpu; // host array of MyPhysics
-
-    private:
-        Propagator(const Propagator& other) = delete;
-        Propagator& operator=(const Propagator& other) = delete;
-    public:
-
-    Propagator(int deviceId_, size_t n_cosines_, std::shared_ptr<ParameterObject>& params)
-            : deviceId(deviceId_), n_cosines(n_cosines_), parameterObject(params){
-
-	    if(!params) throw std::runtime_error("Propagator::Propagator: params are null");
+        PropagatorImpl(int deviceId_,
+                       int nflvs_,
+                        int n_cosines_,
+                        int batchsizeLimit,
+                        std::shared_ptr<ParameterObject>& params)
+                    : parameterObject(params),
+                      NFLVS(nflvs_),
+                      susize(NFLVS * NFLVS),
+                      deviceId(deviceId_),
+                      n_cosines(n_cosines_),
+                      max_n_cosines(std::min(batchsizeLimit, n_cosines)){
 
             int nGpus;
             cudaGetDeviceCount(&nGpus); CUERR;
@@ -187,17 +170,27 @@ namespace cudanusquids{
                 throw std::runtime_error("Propagator : invalid device id");
 
             cudaSetDevice(deviceId); CUERR;
+            // create streams
+            cudaStreamCreate(&updateTimeStream); CUERR;
+            cudaStreamCreate(&evolveProjectorsStream); CUERR;
+            cudaStreamCreate(&updateIntStructStream); CUERR;
+            cudaStreamCreate(&updateNCarraysStream); CUERR;
+            cudaStreamCreate(&updateTauarraysStream); CUERR;
+            cudaStreamCreate(&updateGRarraysStream); CUERR;
+            cudaStreamCreate(&calculateFluxStream); CUERR;
+            cudaStreamCreate(&hiStream); CUERR;
+            cudaStreamCreate(&gammaRhoStream); CUERR;
+            cudaStreamCreate(&interactionsRhoStream); CUERR;
 
-            max_n_cosines = std::min(size_t(BATCH_SIZE_LIMIT), n_cosines);
+            for(int i = 0; i < nCopyStreams; i++)
+                cudaStreamCreate(&copyStreams[i]); CUERR;
 
             results.resize(NFLVS * n_cosines * parameterObject->GetNumRho() * parameterObject->GetNumE());
-            cosineList.resize(n_cosines);
             initialFlux.resize(n_cosines  * parameterObject->GetNumE() * parameterObject->GetNumRho() * NFLVS);
 
             finalStatesHost = make_unique_pinned<double>(n_cosines * parameterObject->GetNumRho() * parameterObject->GetNumE() * susize);
 
             energyListgpu = make_unique_dev<double>(deviceId, parameterObject->GetNumE());
-            cosineListgpu = make_unique_dev<double>(deviceId, max_n_cosines);
             initialFluxgpu = make_unique_dev<double>(deviceId, max_n_cosines  * parameterObject->GetNumE() * parameterObject->GetNumRho() * NFLVS);
 
             DM2datagpu = make_unique_dev<double>(deviceId, susize);
@@ -248,12 +241,23 @@ namespace cudanusquids{
             h0offset = h0pitch / sizeof(double);
             b0offset = NFLVS;
             b1offset = parameterObject->GetNumRho() * NFLVS;
+			fluxOffset = currentFluxesPitch / sizeof(double);
 
+            delEgpu = make_unique_dev<double>(deviceId, parameterObject->GetNumE());
 
-            delEgpu = make_unique_dev<double>(deviceId, parameterObject->GetNumE() - 1);
-            tracks = make_unique_pinned<typename body_t::Track>(n_cosines);
+            //copy energy list to gpu
+            auto energyList = parameterObject->GetERange();
+            cudaMemcpyAsync(energyListgpu.get(), &energyList[0], sizeof(double) * parameterObject->GetNumE(), H2D, copyStreams[0]); CUERR;
+            std::vector<double> delE(parameterObject->GetNumE(), 0.0);
 
-            if(!interactionArraysAreAllocated && parameterObject->GetUseInteractions()){
+            for(int i = 0; i < parameterObject->GetNumE()-1; i++)
+                delE[i+1] = energyList[i+1] - energyList[i];
+
+            cudaMemcpyAsync(delEgpu.get(), delE.data(), sizeof(double) * (parameterObject->GetNumE()), H2D, copyStreams[0]); CUERR;
+
+            cudaStreamSynchronize(copyStreams[0]);
+
+            if(!interactionArraysAreAllocated && parameterObject->Get_CanUseInteractions()){
                 intstates = make_InteractionStateBufferGpu(deviceId, parameterObject->GetNumRho(), NFLVS, parameterObject->GetNumE(), max_n_cosines);
                 gr_arraygpu = make_unique_dev<double>(deviceId, max_n_cosines * parameterObject->GetNumE());
                 nc_arraygpu = make_unique_dev<double>(deviceId, max_n_cosines * parameterObject->GetNumRho() * NFLVS * parameterObject->GetNumE());
@@ -265,191 +269,12 @@ namespace cudanusquids{
                 interactionArraysAreAllocated = true;
             }
 
-            // create streams
-
-            cudaStreamCreate(&updateTimeStream); CUERR;
-            cudaStreamCreate(&evolveProjectorsStream); CUERR;
-            cudaStreamCreate(&updateIntStructStream); CUERR;
-            cudaStreamCreate(&updateNCarraysStream); CUERR;
-            cudaStreamCreate(&updateTauarraysStream); CUERR;
-            cudaStreamCreate(&updateGRarraysStream); CUERR;
-            cudaStreamCreate(&calculateFluxStream); CUERR;
-            cudaStreamCreate(&hiStream); CUERR;
-            cudaStreamCreate(&gammaRhoStream); CUERR;
-            cudaStreamCreate(&interactionsRhoStream); CUERR;
-
-            for(size_t i = 0; i < nCopyStreams; i++)
-                cudaStreamCreate(&copyStreams[i]); CUERR;
-
             rkstatsHost = make_unique_pinned<ode::RKstats>(n_cosines); CUERR;
             rkstatsgpu = make_unique_dev<ode::RKstats>(deviceId, max_n_cosines); CUERR;
 
-            nsqcpu = make_unique_pinned<MyPhysics>(max_n_cosines); // host array of device Physics pointers
-            nsqgpu = make_unique_dev<MyPhysics>(deviceId, max_n_cosines);
-
-            // let MyPhysics objects point to correct device memory
-            for(size_t i = 0; i < n_cosines; i++){
-
-                size_t indexInBatch = i % max_n_cosines;
-
-                // problem dimensions
-                nsqcpu.get()[i].set_max_n_cosines(max_n_cosines);
-                nsqcpu.get()[i].set_n_rhos(parameterObject->GetNumRho());
-                nsqcpu.get()[i].set_n_energies(parameterObject->GetNumE());
-                nsqcpu.get()[i].set_indexInBatch(indexInBatch);
-                nsqcpu.get()[i].set_globalPathId(i);
-
-                nsqcpu.get()[i].set_basis(parameterObject->getBasis());
-                nsqcpu.get()[i].set_neutrinoType(parameterObject->getNeutrinoType());
-
-                // variables for data access
-                nsqcpu.get()[i].set_b0offset(b0offset);
-                nsqcpu.get()[i].set_b1offset(b1offset);
-                nsqcpu.get()[i].set_evolB1pitch(evolB1pitch);
-                nsqcpu.get()[i].set_evoloffset(evolB1offset);
-                nsqcpu.get()[i].set_h0pitch(h0pitch);
-                nsqcpu.get()[i].set_h0offset(h0offset);
-                nsqcpu.get()[i].set_statesOffset(statesOffset);
-                nsqcpu.get()[i].set_statesPitch(statespitch);
-                nsqcpu.get()[i].set_fluxPitch(currentFluxesPitch);
-
-                // data arrays
-                nsqcpu.get()[i].set_states(statesgpu.get() + indexInBatch * statespitch / sizeof(double) * parameterObject->GetNumRho() * susize);
-                nsqcpu.get()[i].set_b0proj(B0projgpu.get());
-                nsqcpu.get()[i].set_b1proj(B1projgpu.get());
-                nsqcpu.get()[i].set_evolB1proj(evolB1projgpu.get() + indexInBatch * evolB1pitch / sizeof(double) * parameterObject->GetNumRho() * NFLVS * susize);
-                nsqcpu.get()[i].set_H0_array(H0_arraygpu.get());
-                nsqcpu.get()[i].set_dm2(DM2datagpu.get());
-                nsqcpu.get()[i].set_energyList(energyListgpu.get());
-                nsqcpu.get()[i].set_delE(delEgpu.get());
-                nsqcpu.get()[i].set_fluxes(currentFluxes.get() + indexInBatch * currentFluxesPitch / sizeof(double) * parameterObject->GetNumRho() * NFLVS);
-
-                if(parameterObject->GetUseInteractions()){
-                    nsqcpu.get()[i].set_nc_array(nc_arraygpu.get() + indexInBatch * parameterObject->GetNumRho() * NFLVS * parameterObject->GetNumE());
-                    nsqcpu.get()[i].set_tau_decay_fluxes(tau_decay_fluxesgpu.get() + indexInBatch * parameterObject->GetNumE());
-                    nsqcpu.get()[i].set_tau_bar_decay_fluxes(tau_bar_decay_fluxesgpu.get() + indexInBatch * parameterObject->GetNumE());
-                    nsqcpu.get()[i].set_tau_hadlep_array(tau_hadlep_arraygpu.get() + indexInBatch * parameterObject->GetNumRho() * parameterObject->GetNumE());
-                    nsqcpu.get()[i].set_tau_lep_array(tau_lep_arraygpu.get() + indexInBatch * parameterObject->GetNumRho() * parameterObject->GetNumE());
-                    nsqcpu.get()[i].set_gr_array(gr_arraygpu.get() + indexInBatch * parameterObject->GetNumE());
-                    nsqcpu.get()[i].set_intstate(intstates[indexInBatch]);
-                }
-            }
-
-            //copy energy list to gpu
-            auto energyList = parameterObject->GetERange();
-            cudaMemcpyAsync(energyListgpu.get(), &energyList[0], sizeof(double) * parameterObject->GetNumE(), H2D, copyStreams[0]); CUERR;
-            std::vector<double> delE(parameterObject->GetNumE() - 1);
-
-            for(size_t i = 0; i < parameterObject->GetNumE()-1; i++)
-                delE[i] = energyList[i+1] - energyList[i];
-
-            cudaMemcpyAsync(delEgpu.get(), delE.data(), sizeof(double) * (parameterObject->GetNumE() - 1), H2D, copyStreams[0]); CUERR;
-
-            cudaStreamSynchronize(copyStreams[0]);
-
-
-			mixingParametersChanged();
-			simulationFlagsChanged();
         }
 
-        Propagator(Propagator&& other){
-            *this = std::move(other);
-
-            cudaSetDevice(deviceId);
-
-            cudaStreamCreate(&updateTimeStream); CUERR;
-            cudaStreamCreate(&evolveProjectorsStream); CUERR;
-            cudaStreamCreate(&updateIntStructStream); CUERR;
-            cudaStreamCreate(&updateNCarraysStream); CUERR;
-            cudaStreamCreate(&updateTauarraysStream); CUERR;
-            cudaStreamCreate(&updateGRarraysStream); CUERR;
-            cudaStreamCreate(&calculateFluxStream); CUERR;
-            cudaStreamCreate(&hiStream); CUERR;
-            cudaStreamCreate(&gammaRhoStream); CUERR;
-            cudaStreamCreate(&interactionsRhoStream); CUERR;
-
-            for(size_t i = 0; i < nCopyStreams; i++)
-                cudaStreamCreate(&copyStreams[i]); CUERR;
-        }
-
-        Propagator& operator=(Propagator&& other){
-
-	    parameterObject = std::move(other.parameterObject);
-            cosineList = std::move(other.cosineList);
-            finalStatesHost = std::move(other.finalStatesHost);
-            results = std::move(other.results);
-	    initialFlux = std::move(other.initialFlux);
-            energyListgpu = std::move(other.energyListgpu);
-            cosineListgpu = std::move(other.cosineListgpu);
-            initialFluxgpu = std::move(other.initialFluxgpu);
-            DM2datagpu = std::move(other.DM2datagpu);
-            H0_arraygpu = std::move(other.H0_arraygpu);
-            delEgpu = std::move(other.delEgpu);
-            B0projgpu = std::move(other.B0projgpu);
-            B1projgpu = std::move(other.B1projgpu);
-            evolB1projgpu = std::move(other.evolB1projgpu);
-            statesgpu = std::move(other.statesgpu);
-            intstructcpu = std::move(other.intstructcpu);
-            intstructgpu = other.intstructgpu;
-            bodygpu = std::move(other.bodygpu);
-
-            tracks = std::move(other.tracks);
-
-            gr_arraygpu = std::move(other.gr_arraygpu);
-            nc_arraygpu = std::move(other.nc_arraygpu);
-            tau_hadlep_arraygpu = std::move(other.tau_hadlep_arraygpu);
-            tau_lep_arraygpu = std::move(other.tau_lep_arraygpu);
-            tau_decay_fluxesgpu = std::move(other.tau_decay_fluxesgpu);
-            tau_bar_decay_fluxesgpu = std::move(other.tau_bar_decay_fluxesgpu);
-            currentFluxes = std::move(other.currentFluxes);
-
-            rkstatsHost = std::move(other.rkstatsHost);
-            rkstatsgpu = std::move(other.rkstatsgpu);
-
-            nsqcpu = std::move(other.nsqcpu);
-            nsqgpu = std::move(other.nsqgpu);
-			
-	    additionalDataPointersGpu = std::move(other.additionalDataPointersGpu);
-	    additionalDatagpuvec = std::move(other.additionalDatagpuvec);
-
-            intstates = std::move(other.intstates);
-
-            currentFluxesPitch = other.currentFluxesPitch;
-            h0pitch = other.h0pitch;
-            evolB1pitch = other.evolB1pitch;
-            statespitch = other.statespitch;
-            statesOffset = other.statesOffset;
-            evolB1offset = other.evolB1offset;
-            h0offset = other.h0offset;
-            b0offset = other.b0offset;
-            b1offset = other.b1offset;
-            deviceId = other.deviceId;
-
-            n_cosines = other.n_cosines;
-            max_n_cosines = other.max_n_cosines;
-
-	    timesgpu = other.timesgpu;
-	    derivationInputgpu = other.derivationInputgpu;
-	    derivationOutputgpu = other.derivationOutputgpu;
-	    activePathsgpu = other.activePathsgpu;
-	    nPaths = other.nPaths;
-
-	    previousEvalType = other.previousEvalType;
-
-            isInit_intstruct = other.isInit_intstruct;
-            interactionsAreInitialized = other.interactionsAreInitialized;
-            interactionArraysAreAllocated = other.interactionArraysAreAllocated;
-
-            other.isInit_intstruct = false;
-            other.interactionsAreInitialized = false;
-            other.interactionArraysAreAllocated = false;
-
-            return *this;
-        }
-
-
-
-        ~Propagator(){
+        ~PropagatorImpl(){
             cudaSetDevice(deviceId); CUERR;
 
             cudaStreamDestroy(updateTimeStream); CUERR;
@@ -472,38 +297,107 @@ namespace cudanusquids{
             }
         }
 
+        template<class Physics>
+        void init_host_physics(Physics* physics){
+            // let physics objects point to correct device memory
+            for(int i = 0; i < n_cosines; i++){
+
+                int indexInBatch = i % max_n_cosines;
+
+                // problem dimensions
+                physics[i].set_max_n_cosines(max_n_cosines);
+                physics[i].set_n_rhos(parameterObject->GetNumRho());
+                physics[i].set_n_energies(parameterObject->GetNumE());
+                physics[i].set_indexInBatch(indexInBatch);
+                physics[i].set_globalPathId(i);
+
+                physics[i].set_basis(parameterObject->getBasis());
+                physics[i].set_neutrinoType(parameterObject->getNeutrinoType());
+
+                // variables for data access
+                physics[i].set_b0offset(b0offset);
+                physics[i].set_b1offset(b1offset);
+                physics[i].set_evolB1pitch(evolB1pitch);
+                physics[i].set_evoloffset(evolB1offset);
+                physics[i].set_h0pitch(h0pitch);
+                physics[i].set_h0offset(h0offset);
+                physics[i].set_statesOffset(statesOffset);
+                physics[i].set_statesPitch(statespitch);
+				physics[i].set_fluxOffset(fluxOffset);
+                physics[i].set_fluxPitch(currentFluxesPitch);
+
+                // data arrays
+                physics[i].set_states(statesgpu.get() + indexInBatch * statespitch / sizeof(double) * parameterObject->GetNumRho() * susize);
+                physics[i].set_b0proj(B0projgpu.get());
+                physics[i].set_b1proj(B1projgpu.get());
+                physics[i].set_evolB1proj(evolB1projgpu.get() + indexInBatch * evolB1pitch / sizeof(double) * parameterObject->GetNumRho() * NFLVS * susize);
+                physics[i].set_H0_array(H0_arraygpu.get());
+                physics[i].set_dm2(DM2datagpu.get());
+                physics[i].set_energyList(energyListgpu.get());
+                physics[i].set_delE(delEgpu.get());
+                physics[i].set_fluxes(currentFluxes.get() + indexInBatch * currentFluxesPitch / sizeof(double) * parameterObject->GetNumRho() * NFLVS);
+
+                if(parameterObject->Get_CanUseInteractions()){
+                    physics[i].set_nc_array(nc_arraygpu.get() + indexInBatch * parameterObject->GetNumRho() * NFLVS * parameterObject->GetNumE());
+                    physics[i].set_tau_decay_fluxes(tau_decay_fluxesgpu.get() + indexInBatch * parameterObject->GetNumE());
+                    physics[i].set_tau_bar_decay_fluxes(tau_bar_decay_fluxesgpu.get() + indexInBatch * parameterObject->GetNumE());
+                    physics[i].set_tau_hadlep_array(tau_hadlep_arraygpu.get() + indexInBatch * parameterObject->GetNumRho() * parameterObject->GetNumE());
+                    physics[i].set_tau_lep_array(tau_lep_arraygpu.get() + indexInBatch * parameterObject->GetNumRho() * parameterObject->GetNumE());
+                    physics[i].set_gr_array(gr_arraygpu.get() + indexInBatch * parameterObject->GetNumE());
+                    physics[i].set_intstate(intstates[indexInBatch]);
+                }
+            }
+        }
+
         /*
            Functions to evolve systems
         */
 
-        void evolve(){
+        template<class Physics, class Track>
+        void evolve(Physics* cpuphysics,
+                    Physics* gpuphysics,
+                    Track* tracks){
             previousEvalType = detail::EvalType::None; //invalidate results of previous simulation
 
             switch(parameterObject->Get_SolverType()){
                 case SolverType::Version1:
-				            evolveVersion1();
+                            evolveVersion1(cpuphysics,
+                                           gpuphysics,
+                                           tracks);
                             break;
                 case SolverType::Version2:
-                            evolveVersion2();
+                            evolveVersion2(cpuphysics,
+                                           gpuphysics,
+                                           tracks);
                             break;
                 default: throw std::runtime_error("Propagator::evolve: invalid solverType.");
             }
         }
 
-        void evolveVersion1(){
+        template<class Physics, class Track>
+        void evolveVersion1(Physics* cpuphysics,
+                            Physics* gpuphysics,
+                            Track* tracks){
             switch(parameterObject->Get_StepperType()){
             case ode::StepperType::RK4:
-                evolveVersion1_impl<ode::stepper::RK42D>();
+                evolveVersion1_impl<ode::stepper::RK42D>(cpuphysics,
+                                                         gpuphysics,
+                                                         tracks);
                 break;
             default:
                 throw std::runtime_error("Unknown stepper type");
             };
         }
 
-        void evolveVersion2(){
+        template<class Physics, class Track>
+        void evolveVersion2(Physics* cpuphysics,
+                            Physics* gpuphysics,
+                            Track* tracks){
             switch(parameterObject->Get_StepperType()){
             case ode::StepperType::RK4:
-                evolveVersion2_impl<ode::stepper::RK4>();
+                evolveVersion2_impl<ode::stepper::RK4>(cpuphysics,
+                                                       gpuphysics,
+                                                       tracks);
                 break;
             default:
                 throw std::runtime_error("Unknown stepper type");
@@ -511,20 +405,32 @@ namespace cudanusquids{
 
         }
 
-        template<class Stepper>
-        void evolveVersion1_impl(){
+        template<class Stepper, class Physics, class Track>
+        void evolveVersion1_impl(Physics* cpuphysics,
+                                 Physics* gpuphysics,
+                                 Track* tracks){
             cudaSetDevice(deviceId); CUERR;
+
+            struct odehelper{
+                PropagatorImpl* impl;
+                Physics* gpuphysics;
+            };
+
+            odehelper helper{this, gpuphysics};
 
             // interface to ODE solver
             auto RHS = [](const size_t* const activeIndices, size_t nIndices, const double* const t,
                                 double* const y, double* const y_derived, void* userdata){
-                Propagator* nsq = static_cast<Propagator*>(userdata);
+
+                const odehelper* helper = static_cast<const odehelper*>(userdata);
+
+                PropagatorImpl* nsq = helper->impl;
                 nsq->timesgpu = t;
                 nsq->derivationInputgpu = y;
                 nsq->derivationOutputgpu = y_derived;
                 nsq->activePathsgpu = activeIndices;
                 nsq->nPaths = nIndices;
-                nsq->derive();
+                nsq->derive(helper->gpuphysics);
             };
 
             // progress function
@@ -535,22 +441,25 @@ namespace cudanusquids{
                             printf("\n");
             };
 
-            beforeEvolution(); CUERR;
+            beforeEvolution(cpuphysics, tracks); CUERR;
 
             std::vector<double> t_begin(max_n_cosines);
             std::vector<double> t_end(max_n_cosines);
 
-            const unsigned int iters = SDIV(n_cosines, max_n_cosines);
+            const int iters = SDIV(n_cosines, max_n_cosines);
 
-            for(unsigned int currentCosineBatch = 0; currentCosineBatch < iters; currentCosineBatch++){
-                const unsigned int batchsize = currentCosineBatch < iters - 1 ? max_n_cosines : n_cosines - currentCosineBatch * max_n_cosines;
+            for(int currentCosineBatch = 0; currentCosineBatch < iters; currentCosineBatch++){
+                const int batchsize = currentCosineBatch < iters - 1 ? max_n_cosines : n_cosines - currentCosineBatch * max_n_cosines;
 
-                beforeBatchEvolution(currentCosineBatch);
+                beforeBatchEvolution(cpuphysics,
+                                     gpuphysics,
+                                     tracks,
+                                     currentCosineBatch);
 
                 // get begin and end of current paths
-                for(size_t i = 0; i < batchsize; i++){
-                    t_begin[i] = tracks.get()[currentCosineBatch * max_n_cosines + i].getXBegin();
-                    t_end[i] = tracks.get()[currentCosineBatch * max_n_cosines + i].getXEnd();
+                for(int i = 0; i < batchsize; i++){
+                    t_begin[i] = tracks[currentCosineBatch * max_n_cosines + i].getXBegin();
+                    t_end[i] = tracks[currentCosineBatch * max_n_cosines + i].getXEnd();
                 }
 
                 //set up ODE solver
@@ -558,7 +467,7 @@ namespace cudanusquids{
                                                 parameterObject->GetNumE(), NFLVS * NFLVS * parameterObject->GetNumRho(), batchsize,
                                                 parameterObject->Get_NumSteps(),
                                                 parameterObject->Get_h(), parameterObject->Get_h_min(), parameterObject->Get_h_max(),
-                                                t_begin, t_end, (void*)this,
+                                                t_begin, t_end, &helper,
                                                 RHS, // step function
                                                 progressFunc);
 
@@ -575,38 +484,42 @@ namespace cudanusquids{
                 // save runge kutta stats
                 std::copy(solver.stats.begin(), solver.stats.end(), rkstatsHost.get() + currentCosineBatch * max_n_cosines);CUERR;
 
-                afterBatchEvolution(currentCosineBatch);
+                afterBatchEvolution(cpuphysics,
+                                    gpuphysics,
+                                    tracks,
+                                    currentCosineBatch);
             }
         }
 
-        template<class Stepper>
-        void evolveVersion2_impl(){
+
+        template<class Stepper, class Physics, class Track>
+        void evolveVersion2_impl(Physics* cpuphysics,
+                                 Physics* gpuphysics,
+                                 Track* tracks){
             cudaSetDevice(deviceId); CUERR;
 
-            size_t workspacePerSolver = ode::SolverGPU<Stepper>::getMinimumMemorySize(statespitch, NFLVS * NFLVS * parameterObject->GetNumRho());
+            const size_t workspacePerSolver = ode::SolverGPU<Stepper>::getMinimumMemorySize(statespitch, NFLVS * NFLVS * parameterObject->GetNumRho());
             auto solverworkspace = make_unique_dev<double>(deviceId, workspacePerSolver * max_n_cosines); CUERR;
 
-            beforeEvolution();
+            beforeEvolution(cpuphysics, tracks);
 
-            size_t evolveBlockDimx = 128;
-            size_t evolveGridDimx = 1;
+            int evolveBlockDimx = 128;
+            int evolveGridDimx = 1;
 
-            const unsigned int iters = SDIV(n_cosines, max_n_cosines);
+            const int iters = SDIV(n_cosines, max_n_cosines);
 
-            for(unsigned int currentCosineBatch = 0; currentCosineBatch < iters; currentCosineBatch++){
-                const unsigned int batchsize = currentCosineBatch < iters - 1 ? max_n_cosines : n_cosines - currentCosineBatch * max_n_cosines;
+            for(int currentCosineBatch = 0; currentCosineBatch < iters; currentCosineBatch++){
+                const int batchsize = currentCosineBatch < iters - 1 ? max_n_cosines : n_cosines - currentCosineBatch * max_n_cosines;
 
-                beforeBatchEvolution(currentCosineBatch);
+                beforeBatchEvolution(cpuphysics,
+                                     gpuphysics,
+                                     tracks,
+                                     currentCosineBatch);
 
                 dim3 evolveblock(evolveBlockDimx, 1, 1);
                 dim3 evolvegrid(evolveGridDimx, batchsize, 1);
 
-                const bool anyInteractions = !(parameterObject->getFlags().useNonCoherentRhoTerms
-                                                || parameterObject->getFlags().useNCInteractions
-                                                || parameterObject->getFlags().useTauRegeneration
-                                                || parameterObject->getFlags().useGlashowResonance);
-
-                callEvolveKernel(nsqgpu.get() , batchsize, anyInteractions,
+                callEvolveKernel(gpuphysics , batchsize, !parameterObject->Get_CanUseInteractions(),
                                 rkstatsgpu.get(), parameterObject->Get_NumSteps(),
                                 parameterObject->Get_h(), parameterObject->Get_h_min(), parameterObject->Get_h_max(),
                                 parameterObject->Get_abs_error(), parameterObject->Get_rel_error(),
@@ -621,50 +534,57 @@ namespace cudanusquids{
                                 sizeof(ode::RKstats) * batchsize,
                                 D2H); CUERR;
 
-                afterBatchEvolution(currentCosineBatch);
+                afterBatchEvolution(cpuphysics,
+                                    gpuphysics,
+                                    tracks,
+                                    currentCosineBatch);
             }
         }
+
 
         /*
             Evolution helper functions
         */
 
-        void beforeEvolution(){
-            if(parameterObject->GetUseInteractions()){
-                initializeInteractions(); CUERR;
+        template<class Physics, class Track>
+        void beforeEvolution(Physics* cpuphysics, Track* cputracks){
+            if(parameterObject->Get_CanUseInteractions()){
+                initializeInteractions(cpuphysics); CUERR;
             }
 
             //set track position to start
-            for(unsigned int i = 0; i < n_cosines; i++){
-                const double begin = tracks.get()[i].getXBegin();
-                tracks.get()[i].setCurrentX(begin);
+            for(int i = 0; i < n_cosines; i++){
+                const double begin = cputracks[i].getXBegin();
+                cputracks[i].setCurrentX(begin);
             }
 
-            updatePhysicsObject(); CUERR;
+            updatePhysicsObject(cpuphysics); CUERR;
         }
 
-        void updatePhysicsObject(){
-            for(size_t i = 0; i < n_cosines; i++){
-                nsqcpu.get()[i].set_flags(parameterObject->getFlags());
-                nsqcpu.get()[i].set_intstruct(intstructgpu);
+        template<class Physics>
+        void updatePhysicsObject(Physics* cpuphysics){
+            for(int i = 0; i < n_cosines; i++){
+                cpuphysics[i].set_flags(parameterObject->getFlags());
+                cpuphysics[i].set_intstruct(intstructgpu);
             }
         }
 
-        void beforeBatchEvolution(unsigned int currentCosineBatch){
-            const unsigned int iters = SDIV(n_cosines, max_n_cosines);
-            const unsigned int batchsize = currentCosineBatch < iters - 1 ? max_n_cosines : n_cosines - currentCosineBatch * max_n_cosines;
+        template<class Physics, class Track>
+        void beforeBatchEvolution(Physics* cpuphysics,
+                                  Physics* gpuphysics,
+                                  Track* tracks,
+                                  int currentCosineBatch){
+            const int iters = SDIV(n_cosines, max_n_cosines);
+            const int batchsize = currentCosineBatch < iters - 1 ? max_n_cosines : n_cosines - currentCosineBatch * max_n_cosines;
 
             // set up the current batch
 
             // set correct tracks in physics objects
-            for(size_t i = 0; i < batchsize; i++){
-                nsqcpu.get()[currentCosineBatch * max_n_cosines + i].set_track(tracks.get()[currentCosineBatch * max_n_cosines + i]);
+            for(int i = 0; i < batchsize; i++){
+                cpuphysics[currentCosineBatch * max_n_cosines + i].set_track(tracks[currentCosineBatch * max_n_cosines + i]);
             }
 
-            cudaMemcpyAsync(nsqgpu.get(), nsqcpu.get() + currentCosineBatch * max_n_cosines, sizeof(MyPhysics) * batchsize, H2D, hiStream); CUERR;
-
-            // copy correct cosine values to gpu
-            cudaMemcpyAsync(cosineListgpu.get(), cosineList.data() + currentCosineBatch * max_n_cosines, sizeof(double) * batchsize, H2D, hiStream); CUERR;
+            cudaMemcpyAsync(gpuphysics,cpuphysics + currentCosineBatch * max_n_cosines, sizeof(Physics) * batchsize, H2D, hiStream); CUERR;
 
             // copy correct initial flux to gpu
             cudaMemcpyAsync(initialFluxgpu.get(),
@@ -684,9 +604,14 @@ namespace cudanusquids{
             cudaStreamSynchronize(hiStream);
         }
 
-        void afterBatchEvolution(unsigned int currentCosineBatch){
-            const unsigned int iters = SDIV(n_cosines, max_n_cosines);
-            const unsigned int batchsize = currentCosineBatch < iters - 1 ? max_n_cosines : n_cosines - currentCosineBatch * max_n_cosines;
+
+        template<class Physics, class Track>
+        void afterBatchEvolution(Physics* cpuphysics,
+                                  Physics* gpuphysics,
+                                  Track* tracks,
+                                  int currentCosineBatch){
+            const int iters = SDIV(n_cosines, max_n_cosines);
+            const int batchsize = currentCosineBatch < iters - 1 ? max_n_cosines : n_cosines - currentCosineBatch * max_n_cosines;
             CUERR;
             //copy solved states from gpu to cpu
             cudaMemcpy2DAsync(finalStatesHost.get() + currentCosineBatch * max_n_cosines * parameterObject->GetNumRho() * parameterObject->GetNumE() * NFLVS * NFLVS,
@@ -698,42 +623,78 @@ namespace cudanusquids{
                 D2H,hiStream); CUERR;
 
             // copy Physics from gpu to cpu (to not override Physics state with next batch)
-            cudaMemcpyAsync(nsqcpu.get() + currentCosineBatch * max_n_cosines, nsqgpu.get(), sizeof(MyPhysics) * batchsize, H2D, hiStream); CUERR;
+            cudaMemcpyAsync(cpuphysics + currentCosineBatch * max_n_cosines,
+                            gpuphysics,
+                            sizeof(Physics) * batchsize,
+                            H2D,
+                            hiStream); CUERR;
 
             // copy solved tracks to tracks array
-            for(size_t i = 0; i < batchsize; i++){
-                tracks.get()[currentCosineBatch * max_n_cosines + i] = nsqcpu.get()[currentCosineBatch * max_n_cosines + i].get_track();
-			}
+            for(int i = 0; i < batchsize; i++){
+                tracks[currentCosineBatch * max_n_cosines + i] = cpuphysics[currentCosineBatch * max_n_cosines + i].get_track();
+            }
 
             cudaStreamSynchronize(hiStream);
         }
+
+
 
         /*
             Prederive functions for Version 1.
             Prederive functions for Version 2 are members of the physics objects and thus not defined in Propagator.
         */
 
-        void setDerivationPointers(double* y_in, double* y_out, const size_t* const activePaths, const size_t nPaths, cudaStream_t stream){
+        template<class Physics>
+        void prederive(Physics* gpuphysics){
+
+            setDerivationPointers(gpuphysics, derivationInputgpu, derivationOutputgpu, activePathsgpu, nPaths, updateTimeStream);
+            updateTime(gpuphysics, timesgpu, activePathsgpu, nPaths, updateTimeStream);
+            cudaStreamSynchronize(updateTimeStream); CUERR; //need correct time for projector evoluation
+            evolveProjectorsAsync(gpuphysics, timesgpu, activePathsgpu, nPaths, evolveProjectorsStream);
+
+			if(parameterObject->Get_CanUseInteractions()){
+
+                cudaStreamSynchronize(updateTimeStream); CUERR; // need correct densities and electronfractions
+                updateInteractionStructAsync(gpuphysics, timesgpu, activePathsgpu, nPaths, updateIntStructStream);
+
+				if(parameterObject->Get_InteractionsRhoTerms()){
+					cudaStreamSynchronize(evolveProjectorsStream); CUERR;
+					cudaStreamSynchronize(updateIntStructStream); CUERR;
+					updateInteractionArrays(gpuphysics);
+				}
+
+            }else{
+                cudaStreamSynchronize(updateTimeStream); CUERR;
+                cudaStreamSynchronize(evolveProjectorsStream); CUERR;
+            }
+
+            addToPrederive(gpuphysics);
+        }
+
+        template<class Physics>
+        void setDerivationPointers(Physics* gpuphysics, double* y_in, double* y_out, const size_t* const activePaths, const size_t nPaths, cudaStream_t stream){
                 dim3 block(1,1,1);
                 dim3 grid;
                 grid.x = 1;
                 grid.y = SDIV(nPaths, block.y);
                 grid.z = 1;
 
-                callSetDerivationPointersKernel(activePaths, nPaths, nsqgpu.get(), y_in, y_out, grid, block, stream);
+                callSetDerivationPointersKernel(activePaths, nPaths, gpuphysics, y_in, y_out, grid, block, stream);
         }
 
-        void updateTime(const double* const times, const size_t* const activePaths, const size_t nPaths, cudaStream_t stream){
+        template<class Physics>
+        void updateTime(Physics* gpuphysics, const double* const times, const size_t* const activePaths, const size_t nPaths, cudaStream_t stream){
                 dim3 block(1,1,1);
                 dim3 grid;
                 grid.x = 1;
                 grid.y = SDIV(nPaths, block.y);
                 grid.z = 1;
 
-                callUpdateTimeKernel(times, activePaths, nPaths, nsqgpu.get(), grid, block, stream);
+                callUpdateTimeKernel(times, activePaths, nPaths, gpuphysics, grid, block, stream);
         }
 
-        void evolveProjectorsAsync(const double* const times, const size_t* const activePaths, const size_t nPaths, cudaStream_t stream){
+        template<class Physics>
+        void evolveProjectorsAsync(Physics* gpuphysics, const double* const times, const size_t* const activePaths, const size_t nPaths, cudaStream_t stream){
 
             dim3 block(64,1,1);
             dim3 grid;
@@ -742,10 +703,11 @@ namespace cudanusquids{
             grid.z = 1;
 
             callEvolveProjectorsKernel(times, activePaths, nPaths,
-                            nsqgpu.get(), grid, block, stream);
+                            gpuphysics, grid, block, stream);
         }
 
-        void updateInteractionStructAsync(const double* const times, const size_t* const activePaths, const size_t nPaths,
+        template<class Physics>
+        void updateInteractionStructAsync(Physics* gpuphysics, const double* const times, const size_t* const activePaths, const size_t nPaths,
                                                             cudaStream_t stream){
             dim3 block(64,1,1);
             dim3 grid;
@@ -756,10 +718,11 @@ namespace cudanusquids{
             cudaStreamSynchronize(updateTimeStream); CUERR;
 
             callUpdateInteractionStructKernel(activePaths, nPaths,
-                                    nsqgpu.get(), grid, block, stream);
+                                    gpuphysics, grid, block, stream);
         }
 
-        void calculateCurrentFlavorFluxesAsync(const size_t* const d_activePaths, size_t nPaths_,
+        template<class Physics>
+        void calculateCurrentFlavorFluxesAsync(Physics* gpuphysics, const size_t* const d_activePaths, size_t nPaths_,
                                                     const double* const d_states, double* d_fluxes,
                                                     cudaStream_t stream){
 
@@ -770,15 +733,13 @@ namespace cudanusquids{
             grid.z = 1;
 
             callCalculateCurrentFlavorFluxesKernel(d_activePaths, nPaths_,
-                                    nsqgpu.get(), grid, block, stream);
+                                    gpuphysics, grid, block, stream);
         }
 
+        template<class Physics>
+        void updateInteractionArrays(Physics* gpuphysics){
 
-        void updateInteractionArrays(){
-            if(!(parameterObject->getFlags().useNCInteractions || parameterObject->getFlags().useTauRegeneration || parameterObject->getFlags().useGlashowResonance))
-                return;
-
-            calculateCurrentFlavorFluxesAsync(activePathsgpu, nPaths, derivationInputgpu, currentFluxes.get(), calculateFluxStream);
+            calculateCurrentFlavorFluxesAsync(gpuphysics, activePathsgpu, nPaths, derivationInputgpu, currentFluxes.get(), calculateFluxStream);
             cudaStreamSynchronize(calculateFluxStream); CUERR;
 
             if(parameterObject->getFlags().useNCInteractions){
@@ -789,7 +750,7 @@ namespace cudanusquids{
                 gridNC.y = SDIV(nPaths, 1);
                 gridNC.z = 1;
 
-                callUpdateNCArraysKernel(activePathsgpu, nPaths, nsqgpu.get(), gridNC, blockNC, updateNCarraysStream);
+                callUpdateNCArraysKernel(activePathsgpu, nPaths, gpuphysics, gridNC, blockNC, updateNCarraysStream);
             }
 
             if(parameterObject->getFlags().useTauRegeneration){
@@ -806,8 +767,8 @@ namespace cudanusquids{
                 gridtau2.y = SDIV(nPaths, 1);
                 gridtau2.z = 1;
 
-                callUpdateTauArraysKernelPart1(activePathsgpu, nPaths, nsqgpu.get(), gridtau1, blocktau1, updateTauarraysStream);
-                callUpdateTauArraysKernelPart2(activePathsgpu, nPaths, nsqgpu.get(), gridtau2, blocktau2, updateTauarraysStream);
+                callUpdateTauArraysKernelPart1(activePathsgpu, nPaths, gpuphysics, gridtau1, blocktau1, updateTauarraysStream);
+                callUpdateTauArraysKernelPart2(activePathsgpu, nPaths, gpuphysics, gridtau2, blocktau2, updateTauarraysStream);
             }
 
 
@@ -819,7 +780,7 @@ namespace cudanusquids{
                 gridGlashow.y = nPaths;
                 gridGlashow.z = 1;
 
-                callUpdateGRArraysKernel(activePathsgpu, nPaths, nsqgpu.get(), gridGlashow, blockGlashow, updateGRarraysStream);
+                callUpdateGRArraysKernel(activePathsgpu, nPaths, gpuphysics, gridGlashow, blockGlashow, updateGRarraysStream);
             }
 
 
@@ -828,7 +789,8 @@ namespace cudanusquids{
             cudaStreamSynchronize(updateGRarraysStream); CUERR;
         }
 
-        void addToPrederive(){
+        template<class Physics>
+        void addToPrederive(Physics* gpuphysics){
             cudaSetDevice(deviceId); CUERR;
 
             dim3 block(64,1,1);
@@ -837,68 +799,40 @@ namespace cudanusquids{
             grid.y = nPaths;
             grid.z = 1;
 
-            callAddToPrederiveKernel(timesgpu, activePathsgpu, nPaths, nsqgpu.get(), grid, block, updateTimeStream);
+            callAddToPrederiveKernel(timesgpu, activePathsgpu, nPaths, gpuphysics, grid, block, updateTimeStream);
 
             cudaStreamSynchronize(updateTimeStream); CUERR;
-        }
-
-        void prederive(){
-
-            cudaSetDevice(deviceId); CUERR;
-            setDerivationPointers(derivationInputgpu, derivationOutputgpu, activePathsgpu, nPaths, updateTimeStream);
-            updateTime(timesgpu, activePathsgpu, nPaths, updateTimeStream);
-            cudaStreamSynchronize(updateTimeStream); CUERR; //need correct time for projector evoluation
-            evolveProjectorsAsync(timesgpu, activePathsgpu, nPaths, evolveProjectorsStream);
-
-            if((parameterObject->getFlags().useNonCoherentRhoTerms || parameterObject->getFlags().useNCInteractions || parameterObject->getFlags().useTauRegeneration || parameterObject->getFlags().useGlashowResonance)){
-
-                cudaStreamSynchronize(updateTimeStream); CUERR; // need correct densities and electronfractions
-                updateInteractionStructAsync(timesgpu, activePathsgpu, nPaths, updateIntStructStream);
-                cudaStreamSynchronize(evolveProjectorsStream); CUERR;
-                cudaStreamSynchronize(updateIntStructStream); CUERR;
-                updateInteractionArrays();
-
-            }else{
-                cudaStreamSynchronize(updateTimeStream); CUERR;
-                cudaStreamSynchronize(evolveProjectorsStream); CUERR;
-            }
-
-            addToPrederive();
         }
 
         /*
             Derivation function for Version 1.
             Derivation function for Version 2 is member of the physics objects and thus not defined in Propagator.
         */
-
-        void derive(){
-            cudaSetDevice(deviceId); CUERR;
+        template<class Physics>
+        void derive(Physics* gpuphysics){
 
             dim3 blockDerive(128, 1, 1);
             dim3 gridDerive(SDIV(parameterObject->GetNumE(), blockDerive.x), SDIV(nPaths, 1), 1);
 
-            prederive();
+            prederive(gpuphysics);
 
-            if((parameterObject->getFlags().useNonCoherentRhoTerms
-                || parameterObject->getFlags().useNCInteractions
-                || parameterObject->getFlags().useTauRegeneration
-                || parameterObject->getFlags().useGlashowResonance)){
+            if(parameterObject->Get_CanUseInteractions()){
 
                 callDeriveKernel(
                         activePathsgpu,
                         nPaths,
-                        nsqgpu.get(), gridDerive, blockDerive, hiStream);
+                        gpuphysics, gridDerive, blockDerive, hiStream);
             }else{
                 callDeriveOscKernel(
                         activePathsgpu,
                         nPaths,
-                        nsqgpu.get(), gridDerive, blockDerive, hiStream);
+                        gpuphysics, gridDerive, blockDerive, hiStream);
             }
 
             callEndDeriveKernel(
                     activePathsgpu,
                     nPaths,
-                    nsqgpu.get(), gridDerive, blockDerive, hiStream);
+                    gpuphysics, gridDerive, blockDerive, hiStream);
 
             cudaStreamSynchronize(hiStream); CUERR;
         }
@@ -906,11 +840,10 @@ namespace cudanusquids{
         /*
             Data initialization functions
         */
+        template<class Physics>
+        void initializeInteractions(Physics* cpuphysics){
 
-        void initializeInteractions(){
-
-            if(parameterObject->GetUseInteractions() && !interactionsAreInitialized){
-                CUERR;
+            if(parameterObject->Get_CanUseInteractions() && !interactionsAreInitialized){
 
                 cudaSetDevice(deviceId); CUERR;
 
@@ -920,8 +853,8 @@ namespace cudanusquids{
 
                 intstructgpu = make_InteractionStructureGpu(deviceId, *intstructcpu);
 
-                for(size_t i = 0; i < n_cosines; i++){
-                    nsqcpu.get()[i].set_intstruct(intstructgpu);
+                for(int i = 0; i < n_cosines; i++){
+                    cpuphysics[i].set_intstruct(intstructgpu);
                 }
 
                 isInit_intstruct = true;
@@ -938,9 +871,9 @@ namespace cudanusquids{
             parameterObject->initializeProjectors();
 
             auto tmp = make_unique_pinned<double>(NFLVS*NFLVS*NFLVS);
-            for(unsigned int flv = 0; flv < NFLVS; flv++){
+            for(int flv = 0; flv < NFLVS; flv++){
                 auto proj = parameterObject->GetMassProj(flv);
-                for(unsigned int j = 0; j < NFLVS * NFLVS; j++){
+                for(int j = 0; j < NFLVS * NFLVS; j++){
                     tmp.get()[flv + j * b0offset] = proj[j];
                 }
             }
@@ -958,10 +891,10 @@ namespace cudanusquids{
             parameterObject->initializeProjectors();
 
             auto tmp = make_unique_pinned<double>(parameterObject->GetNumRho()*NFLVS*NFLVS*NFLVS);
-            for(unsigned int rho = 0; rho < parameterObject->GetNumRho(); rho++){
-                for(unsigned int flv = 0; flv < NFLVS; flv++){
+            for(int rho = 0; rho < parameterObject->GetNumRho(); rho++){
+                for(int flv = 0; flv < NFLVS; flv++){
                     auto proj = parameterObject->GetFlavorProj(flv, rho);
-                    for(unsigned int j = 0; j < NFLVS * NFLVS; j++){
+                    for(int j = 0; j < NFLVS * NFLVS; j++){
                         tmp.get()[rho * NFLVS + flv + j * b1offset] = proj[j];
                     }
                 }
@@ -981,7 +914,7 @@ namespace cudanusquids{
 
             auto dm2vec = parameterObject->getDM2();
             auto tmp = make_unique_pinned<double>(NFLVS*NFLVS);
-            for(unsigned int j = 0; j < NFLVS * NFLVS; j++){
+            for(int j = 0; j < NFLVS * NFLVS; j++){
                 tmp.get()[j] = dm2vec[j];
             }
             cudaStream_t mystream = (cudaStream_t) 0;
@@ -989,7 +922,8 @@ namespace cudanusquids{
             cudaStreamSynchronize(mystream); CUERR;
         }
 
-        void initH0array(){
+        template<class Physics>
+        void initH0array(Physics* cpuphysics, Physics* gpuphysics){
 
             cudaSetDevice(deviceId); CUERR;
 
@@ -1001,18 +935,24 @@ namespace cudanusquids{
                 dim3 block(128, 1, 1);
                 dim3 grid(SDIV(parameterObject->GetNumE(), block.x), 1, 1);
 
-                cudaMemcpyAsync(nsqgpu.get(), nsqcpu.get(), sizeof(MyPhysics) * 1, H2D, hiStream); CUERR;
-                callInitH0arrayKernel(H0_arraygpu.get(), h0pitch, h0offset, nsqgpu.get(), grid, block, hiStream);
+                cudaMemcpyAsync(gpuphysics, cpuphysics, sizeof(Physics) * 1, H2D, hiStream); CUERR;
+                callInitH0arrayKernel(H0_arraygpu.get(), h0pitch, h0offset, gpuphysics, grid, block, hiStream);
             }
 
             cudaStreamSynchronize(hiStream);
         }
 
+
         /*
             Functions to get expectation values
         */
-
-        double EvalFlavorAtNode(size_t flavor, size_t index_cosine, size_t index_rho, size_t index_energy){
+        template<class Physics>
+        double EvalFlavorAtNode(Physics* cpuphysics,
+                                Physics* gpuphysics,
+                                int flavor,
+                                int index_cosine,
+                                int index_rho,
+                                int index_energy){
             //If results are not present on the host, calculate results and transfer to host.
             if(previousEvalType != detail::EvalType::NodeFlavor){
 
@@ -1040,7 +980,7 @@ namespace cudanusquids{
                         calculateFluxStream); CUERR;
 
                     // copy Physics objects to gpu
-                    cudaMemcpyAsync(nsqgpu.get(), nsqcpu.get() + currentCosineBatch * max_n_cosines, sizeof(MyPhysics) * batchsize, H2D, calculateFluxStream); CUERR;
+                    cudaMemcpyAsync(gpuphysics, cpuphysics + currentCosineBatch * max_n_cosines, sizeof(Physics) * batchsize, H2D, calculateFluxStream); CUERR;
 
                     // make list of paths to calculate
                     for(size_t i = 0; i < batchsize; i++) activepathshost[i] = i;
@@ -1059,7 +999,7 @@ namespace cudanusquids{
 
                     callEvalFlavorsAtNodesKernel(activepathsdevice.get(), batchsize,
                             fluxes.get(), parameterObject->GetNumRho(), parameterObject->GetNumE(), NFLVS,
-                            nsqgpu.get(),
+                            gpuphysics,
                             grid, block, calculateFluxStream);
 
                     //copy fluxes from gpu to cpu
@@ -1074,17 +1014,24 @@ namespace cudanusquids{
                 previousEvalType = detail::EvalType::NodeFlavor;
             }
 
-            const size_t resultIndex = index_cosine * parameterObject->GetNumRho()* NFLVS * parameterObject->GetNumE()
-                                        + index_rho * NFLVS * parameterObject->GetNumE()
-                                        + flavor * parameterObject->GetNumE()
-                                        + index_energy;
+            const size_t resultIndex = size_t(index_cosine) * size_t(parameterObject->GetNumRho()) * size_t(NFLVS) * size_t(parameterObject->GetNumE())
+                                        + size_t(index_rho) * size_t(NFLVS) * size_t(parameterObject->GetNumE())
+                                        + size_t(flavor) * size_t(parameterObject->GetNumE())
+                                        + size_t(index_energy);
 
             const double result = results[resultIndex];
 
             return result;
         }
 
-        double EvalMassAtNode(size_t flavor, size_t index_cosine, size_t index_rho, size_t index_energy){
+
+        template<class Physics>
+        double EvalMassAtNode(Physics* cpuphysics,
+                                Physics* gpuphysics,
+                                int flavor,
+                                int index_cosine,
+                                int index_rho,
+                                int index_energy){
             //If results are not present on the host, calculate results and transfer to host.
             if(previousEvalType != detail::EvalType::NodeMass){
 
@@ -1112,10 +1059,9 @@ namespace cudanusquids{
                         calculateFluxStream); CUERR;
 
                     // copy Physics objects to gpu
-                    cudaMemcpyAsync(nsqgpu.get(), nsqcpu.get() + currentCosineBatch * max_n_cosines, sizeof(MyPhysics) * batchsize, H2D, calculateFluxStream); CUERR;
+                    cudaMemcpyAsync(gpuphysics, cpuphysics + currentCosineBatch * max_n_cosines, sizeof(Physics) * batchsize, H2D, calculateFluxStream); CUERR;
 
                     // make list of paths to calculate
-
                     for(size_t i = 0; i < batchsize; i++) activepathshost[i] = i;
 
                     cudaMemcpyAsync(activepathsdevice.get(),
@@ -1132,7 +1078,7 @@ namespace cudanusquids{
 
                     callEvalMassesAtNodesKernel(activepathsdevice.get(), batchsize,
                             fluxes.get(), parameterObject->GetNumRho(), parameterObject->GetNumE(), NFLVS,
-                            nsqgpu.get(),
+                            gpuphysics,
                             grid, block, calculateFluxStream);
 
                     //copy fluxes from gpu to cpu
@@ -1147,10 +1093,10 @@ namespace cudanusquids{
                 previousEvalType = detail::EvalType::NodeMass;
             }
 
-            const size_t resultIndex = index_cosine * parameterObject->GetNumRho()* NFLVS * parameterObject->GetNumE()
-                                        + index_rho * NFLVS * parameterObject->GetNumE()
-                                        + flavor * parameterObject->GetNumE()
-                                        + index_energy;
+			const size_t resultIndex = size_t(index_cosine) * size_t(parameterObject->GetNumRho()) * size_t(NFLVS) * size_t(parameterObject->GetNumE())
+							+ size_t(index_rho) * size_t(NFLVS) * size_t(parameterObject->GetNumE())
+							+ size_t(flavor) * size_t(parameterObject->GetNumE())
+							+ size_t(index_energy);
 
             const double result = results[resultIndex];
 
@@ -1160,16 +1106,10 @@ namespace cudanusquids{
         /*
             Functions to notify about updated parameter object
         */
-
-		void mixingParametersChanged(){
-			initB0Proj();
-            initB1Proj();
-            initH0array();
-		}
-
-		void simulationFlagsChanged(){
+        template<class Physics>
+        void simulationFlagsChanged(Physics* physics){
             //if interactions were never enabled before, but are enabled now, allocate arrays
-            if(!interactionArraysAreAllocated && parameterObject->GetUseInteractions()){
+            if(!interactionArraysAreAllocated && parameterObject->Get_CanUseInteractions()){
                 intstates = make_InteractionStateBufferGpu(deviceId, parameterObject->GetNumRho(), NFLVS, parameterObject->GetNumE(), max_n_cosines);
                 gr_arraygpu = make_unique_dev<double>(deviceId, max_n_cosines * parameterObject->GetNumE());
                 nc_arraygpu = make_unique_dev<double>(deviceId, max_n_cosines * parameterObject->GetNumRho() * NFLVS * parameterObject->GetNumE());
@@ -1178,22 +1118,23 @@ namespace cudanusquids{
                 tau_decay_fluxesgpu = make_unique_dev<double>(deviceId, max_n_cosines * parameterObject->GetNumE());
                 tau_bar_decay_fluxesgpu = make_unique_dev<double>(deviceId, max_n_cosines * parameterObject->GetNumE());
 
-				for(size_t i = 0; i < n_cosines; i++){
-					size_t indexInBatch = i % max_n_cosines;
-                    nsqcpu.get()[i].set_nc_array(nc_arraygpu.get() + indexInBatch * parameterObject->GetNumRho() * NFLVS * parameterObject->GetNumE());
-                    nsqcpu.get()[i].set_tau_decay_fluxes(tau_decay_fluxesgpu.get() + indexInBatch * parameterObject->GetNumE());
-                    nsqcpu.get()[i].set_tau_bar_decay_fluxes(tau_bar_decay_fluxesgpu.get() + indexInBatch * parameterObject->GetNumE());
-                    nsqcpu.get()[i].set_tau_hadlep_array(tau_hadlep_arraygpu.get() + indexInBatch * parameterObject->GetNumRho() * parameterObject->GetNumE());
-                    nsqcpu.get()[i].set_tau_lep_array(tau_lep_arraygpu.get() + indexInBatch * parameterObject->GetNumRho() * parameterObject->GetNumE());
-                    nsqcpu.get()[i].set_gr_array(gr_arraygpu.get() + indexInBatch * parameterObject->GetNumE());
-                    nsqcpu.get()[i].set_intstate(intstates[indexInBatch]);
-				}
+                for(int i = 0; i < n_cosines; i++){
+                    int indexInBatch = i % max_n_cosines;
+                    physics[i].set_nc_array(nc_arraygpu.get() + indexInBatch * parameterObject->GetNumRho() * NFLVS * parameterObject->GetNumE());
+                    physics[i].set_tau_decay_fluxes(tau_decay_fluxesgpu.get() + indexInBatch * parameterObject->GetNumE());
+                    physics[i].set_tau_bar_decay_fluxes(tau_bar_decay_fluxesgpu.get() + indexInBatch * parameterObject->GetNumE());
+                    physics[i].set_tau_hadlep_array(tau_hadlep_arraygpu.get() + indexInBatch * parameterObject->GetNumRho() * parameterObject->GetNumE());
+                    physics[i].set_tau_lep_array(tau_lep_arraygpu.get() + indexInBatch * parameterObject->GetNumRho() * parameterObject->GetNumE());
+                    physics[i].set_gr_array(gr_arraygpu.get() + indexInBatch * parameterObject->GetNumE());
+                    physics[i].set_intstate(intstates[indexInBatch]);
+                }
 
                 interactionArraysAreAllocated = true;
             }
-		}
+        }
 
-        void additionalDataChanged(){
+        template<class Physics>
+        void additionalDataChanged(Physics* physics){
             additionalDatagpuvec.clear();
             additionalDataPointersGpu.reset();
 
@@ -1218,10 +1159,164 @@ namespace cudanusquids{
                 cudaMemcpyAsync(additionalDataPointersGpu.get(), addDataPointersCpu.get(), sizeof(void*) * addDataCPU.size(), H2D, hiStream); CUERR;
                 cudaStreamSynchronize(hiStream);
 
-                for(size_t i = 0; i < n_cosines; i++){
-                        nsqcpu.get()[i].set_additionalData(additionalDataPointersGpu.get());
+                for(int i = 0; i < n_cosines; i++){
+                        physics[i].set_additionalData(additionalDataPointersGpu.get());
                 }
             }
+        }
+
+        template<class Physics>
+        void mixingParametersChanged(Physics* cpuphysics, Physics* gpuphysics){
+			initB0Proj();
+            initB1Proj();
+            initH0array(cpuphysics, gpuphysics);
+		}
+
+        /*
+            Getter and setter.
+        */
+
+        void setInitialFlux(const std::vector<double>& initialFlux_){
+            if(size_t(n_cosines)  * size_t(parameterObject->GetNumE()) * size_t(parameterObject->GetNumRho()) * size_t(NFLVS) != initialFlux_.size())
+                throw std::runtime_error("Propagator::setInitialFlux: Propagator was not created for this number of states");
+
+            initialFlux = initialFlux_;
+        }
+
+        ode::RKstats getRKstats(int index_cosine) const{
+            return rkstatsHost.get()[index_cosine];
+        }
+
+        void setInteractionStructure(std::shared_ptr<InteractionStructure> intstruct){
+            intstructcpu = intstruct;
+        }
+    };
+
+
+    template<int NFLVS_, class body_t, class Op_t = PhysicsOps>
+    class Propagator{
+		friend class CudaNusquids<NFLVS_, body_t, Op_t>;
+        template<int, class, class> friend class Propagator;
+
+        static constexpr int NFLVS = NFLVS_;
+        using Body = body_t;
+        using Ops = Op_t;
+
+        using Track = typename Body::Track;
+        using Physics_t = Physics<NFLVS, Body, Ops>;
+        using Impl_t = PropagatorImpl;
+
+        static_assert(NFLVS == 3 || NFLVS == 4, "Propagator: NFLVS must be 3 or 4.");
+
+        std::unique_ptr<Impl_t> impl;
+
+//body and tracks
+        Body bodygpu;
+        unique_pinned_ptr<Track> tracks; // host array of tracks
+
+        unique_dev_ptr<Physics_t> nsqgpu; // device array of Physics_t
+        unique_pinned_ptr<Physics_t> nsqcpu; // host array of Physics_t
+
+    private:
+        Propagator(const Propagator& other) = delete;
+        Propagator& operator=(const Propagator& other) = delete;
+    public:
+
+        //conversion constructor.
+        //convert body type of other into Body
+        //other must not be accessed afterwards
+        template<class Prob_t>
+        Propagator(Prob_t& other) : impl(std::move(other.impl)){
+            static_assert(NFLVS == other.NFLVS, "Body conversion: NFLVS does not match");
+
+            tracks = make_unique_pinned<Track>(impl->n_cosines);
+
+            nsqcpu = make_unique_pinned<Physics_t>(impl->max_n_cosines); // host array of device Physics pointers
+            nsqgpu = make_unique_dev<Physics_t>(impl->deviceId, impl->max_n_cosines);
+
+            impl->init_host_physics(nsqcpu.get());
+
+			mixingParametersChanged();
+			simulationFlagsChanged();
+        }
+
+        Propagator(int deviceId,
+                   int n_cosines,
+                   int batchsizeLimit,
+                   std::shared_ptr<ParameterObject>& params){
+
+            if(!params)
+                throw std::runtime_error("Propagator::Propagator: params are null");
+            impl.reset(new Impl_t(deviceId, NFLVS, n_cosines, batchsizeLimit, params));
+
+            tracks = make_unique_pinned<Track>(n_cosines);
+
+            nsqcpu = make_unique_pinned<Physics_t>(impl->max_n_cosines); // host array of device Physics pointers
+            nsqgpu = make_unique_dev<Physics_t>(deviceId, impl->max_n_cosines);
+
+            impl->init_host_physics(nsqcpu.get());
+
+			mixingParametersChanged();
+			simulationFlagsChanged();
+        }
+
+        Propagator(Propagator&& other){
+            *this = std::move(other);
+        }
+
+        Propagator& operator=(Propagator&& other){
+	        impl = std::move(other.impl);
+            bodygpu = std::move(other.bodygpu);
+            tracks = std::move(other.tracks);
+            nsqcpu = std::move(other.nsqcpu);
+            nsqgpu = std::move(other.nsqgpu);
+
+            return *this;
+        }
+
+        void evolve(){
+            impl->evolve(nsqcpu.get(),
+                         nsqgpu.get(),
+                         tracks.get());
+        }
+
+
+        /*
+            Functions to get expectation values
+        */
+
+        double EvalFlavorAtNode(int flavor, int index_cosine, int index_rho, int index_energy){
+            return impl->EvalFlavorAtNode(nsqcpu.get(),
+                                            nsqgpu.get(),
+                                            flavor,
+                                            index_cosine,
+                                            index_rho,
+                                            index_energy);
+        }
+
+        double EvalMassAtNode(int flavor, int index_cosine, int index_rho, int index_energy){
+            return impl->EvalMassAtNode(nsqcpu.get(),
+                                            nsqgpu.get(),
+                                            flavor,
+                                            index_cosine,
+                                            index_rho,
+                                            index_energy);
+        }
+
+        /*
+            Functions to notify about updated parameter object
+        */
+
+		void mixingParametersChanged(){
+            impl->mixingParametersChanged(nsqcpu.get(), nsqgpu.get());
+		}
+
+		void simulationFlagsChanged(){
+            impl->simulationFlagsChanged(nsqcpu.get());
+		}
+
+        void additionalDataChanged(){
+            impl->additionalDataChanged(nsqcpu.get());
         }
 
         /*
@@ -1229,38 +1324,35 @@ namespace cudanusquids{
         */
 
         void setInitialFlux(const std::vector<double>& initialFlux_){
-            if(n_cosines  * parameterObject->GetNumE() * parameterObject->GetNumRho() * NFLVS != initialFlux_.size())
-                throw std::runtime_error("Propagator::setInitialFlux: Propagator was not created for this number of states");
-
-            initialFlux = initialFlux_;
+            impl->setInitialFlux(initialFlux_);
         }
 
         void setBody(const body_t& body_){
             bodygpu = body_;
 
-            for(size_t i = 0; i < n_cosines; i++){
+            for(int i = 0; i < impl->n_cosines; i++){
                 nsqcpu.get()[i].set_body(bodygpu);
             }
         }
 
-        void setTracks(const std::vector<typename body_t::Track>& tracks_){
-            if(n_cosines != tracks_.size()){
+        void setTracks(const std::vector<Track>& tracks_){
+            if(size_t(impl->n_cosines) != tracks_.size()){
                 throw std::runtime_error("setTracks error, must provide one track per cosine bin.");
             }
 
 			std::copy(tracks_.begin(), tracks_.end(), tracks.get());
         }
 
-        void setCosineList(const std::vector<double>& list){
-            if(n_cosines != list.size()) throw std::runtime_error("nusquids_core was not created for this number of cosine nodes");
-
-            cosineList = list;
+        ode::RKstats getRKstats(int index_cosine) const{
+            return impl->getRKstats(index_cosine);
         }
 
-        ode::RKstats getRKstats(size_t index_cosine) const{
-            return rkstatsHost.get()[index_cosine];
+        void setInteractionStructure(std::shared_ptr<InteractionStructure> intstruct){
+            impl->setInteractionStructure(intstruct);
         }
+
     };
+
 
 } //namespace end
 

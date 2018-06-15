@@ -81,7 +81,8 @@ namespace cudanusquids{
 
                 DEVICEQUALIFIER
                 void systembarrier() const{
-    #ifdef USE_GRID_SYNC
+    #if 0
+    //#ifdef USE_GRID_SYNC
                     this_grid().sync();
                     //__syncthreads();
     #else
@@ -192,6 +193,10 @@ namespace cudanusquids{
                 void step_apply(double t, double h, double* const __restrict__ y, double* const __restrict__ yerr, const double* const __restrict__ dydt_in, double* const __restrict__ dydt_out) {
                     constexpr double ODEIV_ERR_SAFETY = 8.0;
 
+                    /*
+                        uses step doubling to estimate the error
+                    */
+
                     const size_t tidx = threadIdx.x + blockDim.x * blockIdx.x;
                     for(size_t j = tidx; j < dimx / 2; j += blockDim.x * gridDim.x){
                         reinterpret_cast<double2*>(y0)[j] = reinterpret_cast<const double2*>(y)[j];
@@ -207,7 +212,7 @@ namespace cudanusquids{
 
                     systembarrier();
 
-                    step(y_onestep, t, h);
+                    step(y_onestep, t, h); // one step with full step size
 
                     /* two half steps */
                     for(size_t j = tidx; j < dimx / 2; j += blockDim.x * gridDim.x){
@@ -220,7 +225,7 @@ namespace cudanusquids{
 
                     systembarrier();
 
-                    step(y, t, h / 2.0);
+                    step(y, t, h / 2.0); // first step with half the step size
 
                     const double tt = t + h / 2.0;
 
@@ -236,7 +241,7 @@ namespace cudanusquids{
 
                     systembarrier();
 
-                    step(y, tt, h / 2.0);
+                    step(y, tt, h / 2.0); // second step with half the step size
 
                     const double ttt = t + h;
 

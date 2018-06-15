@@ -22,7 +22,7 @@ along with CUDAnuSQuIDS.  If not, see <http://www.gnu.org/licenses/>.
 #include <cudanuSQuIDS/types.hpp>
 
 #include <cooperative_groups.h>
-    
+
 using namespace cooperative_groups;
 
 
@@ -31,6 +31,34 @@ namespace cudanusquids{
 
 		/*
             Solver for a single ODE. To be run on the gpu in one thread block.
+
+            Template parameter Stepper has to provide the following functions:
+
+                // return the size (number of doubles) of the required work space to solve a system of size (elements) dimx
+                __host__ __device__
+                static size_t getMinimumMemorySize(size_t dimx);
+
+                __device__
+                Stepper();
+
+                __device__
+                ~Stepper();
+
+                //init stepper. buffer = work space, dimx_ = number of elements in system
+                __device__
+                void init(double* buffer, size_t dimx_, void* userdata_,
+                            void (*stepfunc_)(double t, double* const y, double* const y_derived, void* userdata));
+
+                // perform Runge-Kutta step for time t with step size h
+                __device__
+                void step(double* y, double t, double h);
+
+                // perform Runge-Kutta step with error estimation, for example via step doubling
+                __device__
+                void step_apply(double t, double h, double* y, double* yerr, const double* dydt_in, double* dydt_out);
+
+                __device__
+                static constexpr unsigned int getOrder(); // return order of the used method
         */
 
         template<typename Stepper>
@@ -121,6 +149,9 @@ namespace cudanusquids{
                 __syncthreads();
             }
 
+            /*
+                Check errors and adjust the step size h accordingly
+            */
             DEVICEQUALIFIER
             int hadjust(unsigned int ord, const double* y, double* yerr, const double* yp, double* h) const
             {
@@ -149,6 +180,7 @@ namespace cudanusquids{
                     myrmax = (myrmax > r ? myrmax : r);
                 }
 
+                // perform max reduce within the block on myrmax and store maximum in rmax
                 auto op = [](auto a, auto b){
 					return max(a,b);
 				};
@@ -167,6 +199,7 @@ namespace cudanusquids{
 				systembarrier();
 
                 rmax = __longlong_as_double(*((unsigned long long int*)yerr));
+                //reduction finished
 
                 if(threadIdx.x + blockDim.x * blockIdx.x == 0){
                     if (rmax > 1.1){

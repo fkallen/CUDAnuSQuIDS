@@ -1,0 +1,165 @@
+\hypertarget{classcudanusquids_1_1CudaNusquids}{}\section{cudanusquids\+:\+:Cuda\+Nusquids$<$ N\+F\+L\+V\+S\+\_\+, body\+\_\+t, Op\+\_\+t $>$ Class Template Reference}
+\label{classcudanusquids_1_1CudaNusquids}\index{cudanusquids\+::\+Cuda\+Nusquids$<$ N\+F\+L\+V\+S\+\_\+, body\+\_\+t, Op\+\_\+t $>$@{cudanusquids\+::\+Cuda\+Nusquids$<$ N\+F\+L\+V\+S\+\_\+, body\+\_\+t, Op\+\_\+t $>$}}
+
+
+This is the main class of of the library.  
+
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+{\footnotesize template$<$class Nus\+\_\+t $>$ }\\\hyperlink{classcudanusquids_1_1CudaNusquids_a67201994f00eba7e8c24aca9ff64ecce}{Cuda\+Nusquids} (Nus\+\_\+t \&other)
+\begin{DoxyCompactList}\small\item\em Constructor to change body type. \end{DoxyCompactList}\item 
+\hyperlink{classcudanusquids_1_1CudaNusquids_a1df9cd5fddc4cde9d8056a10348187f7}{Cuda\+Nusquids} (std\+::shared\+\_\+ptr$<$ \hyperlink{structcudanusquids_1_1ParameterObject}{Parameter\+Object} $>$ \&params, int batchsize\+Limit)
+\begin{DoxyCompactList}\small\item\em Construct \hyperlink{classcudanusquids_1_1CudaNusquids}{Cuda\+Nusquids} from \hyperlink{structcudanusquids_1_1ParameterObject}{Parameter\+Object}. \end{DoxyCompactList}\item 
+\hyperlink{classcudanusquids_1_1CudaNusquids_a20413f2051b3fb2670128db9eff40af7}{Cuda\+Nusquids} (\hyperlink{classcudanusquids_1_1CudaNusquids}{Cuda\+Nusquids} \&\&other)\hypertarget{classcudanusquids_1_1CudaNusquids_a20413f2051b3fb2670128db9eff40af7}{}\label{classcudanusquids_1_1CudaNusquids_a20413f2051b3fb2670128db9eff40af7}
+
+\begin{DoxyCompactList}\small\item\em Move constructor. \end{DoxyCompactList}\item 
+\hyperlink{classcudanusquids_1_1CudaNusquids}{Cuda\+Nusquids} \& \hyperlink{classcudanusquids_1_1CudaNusquids_ab08484f65f87982f0071071783b6ce53}{operator=} (\hyperlink{classcudanusquids_1_1CudaNusquids}{Cuda\+Nusquids} \&\&other)\hypertarget{classcudanusquids_1_1CudaNusquids_ab08484f65f87982f0071071783b6ce53}{}\label{classcudanusquids_1_1CudaNusquids_ab08484f65f87982f0071071783b6ce53}
+
+\begin{DoxyCompactList}\small\item\em Move assignment operator. \end{DoxyCompactList}\item 
+int \hyperlink{classcudanusquids_1_1CudaNusquids_a359dfdc3c50c1c193f1a9ead01b7e5fb}{get\+Cosine\+Device\+Index} (int index\+\_\+path) const \hypertarget{classcudanusquids_1_1CudaNusquids_a359dfdc3c50c1c193f1a9ead01b7e5fb}{}\label{classcudanusquids_1_1CudaNusquids_a359dfdc3c50c1c193f1a9ead01b7e5fb}
+
+\begin{DoxyCompactList}\small\item\em Return device Id of G\+PU which processes the index\+\_\+path-\/th path. \end{DoxyCompactList}\item 
+double \hyperlink{classcudanusquids_1_1CudaNusquids_afc797c478f2cec5aeaac941b2ea61ea1}{Eval\+Mass\+At\+Node} (int flavor, int index\+\_\+path, int index\+\_\+rho, int index\+\_\+energy)\hypertarget{classcudanusquids_1_1CudaNusquids_afc797c478f2cec5aeaac941b2ea61ea1}{}\label{classcudanusquids_1_1CudaNusquids_afc797c478f2cec5aeaac941b2ea61ea1}
+
+\begin{DoxyCompactList}\small\item\em Get expectation value in mass Basis. \end{DoxyCompactList}\item 
+double \hyperlink{classcudanusquids_1_1CudaNusquids_a50ddee2d94a23a596e22b6c80bb033cd}{Eval\+Flavor\+At\+Node} (int flavor, int index\+\_\+path, int index\+\_\+rho, int index\+\_\+energy)\hypertarget{classcudanusquids_1_1CudaNusquids_a50ddee2d94a23a596e22b6c80bb033cd}{}\label{classcudanusquids_1_1CudaNusquids_a50ddee2d94a23a596e22b6c80bb033cd}
+
+\begin{DoxyCompactList}\small\item\em Get expectation value in flavor Basis. \end{DoxyCompactList}\item 
+void \hyperlink{classcudanusquids_1_1CudaNusquids_a67f231ca290b2c7b89e749b8c8bb2abb}{evolve} ()\hypertarget{classcudanusquids_1_1CudaNusquids_a67f231ca290b2c7b89e749b8c8bb2abb}{}\label{classcudanusquids_1_1CudaNusquids_a67f231ca290b2c7b89e749b8c8bb2abb}
+
+\begin{DoxyCompactList}\small\item\em Evolve neutrinos along the specified paths from path begin to path end. \end{DoxyCompactList}\item 
+void \hyperlink{classcudanusquids_1_1CudaNusquids_a8a61b830c0ac8650f4a52506b56c8c78}{mixing\+Parameters\+Changed} ()
+\begin{DoxyCompactList}\small\item\em Notify a \hyperlink{classcudanusquids_1_1CudaNusquids}{Cuda\+Nusquids} instance that mixing parameters in parameter object changed. \end{DoxyCompactList}\item 
+void \hyperlink{classcudanusquids_1_1CudaNusquids_ac3a20770b3e3a5d238bedea4d1e90272}{simulation\+Flags\+Changed} ()
+\begin{DoxyCompactList}\small\item\em Notify a \hyperlink{classcudanusquids_1_1CudaNusquids}{Cuda\+Nusquids} instance that simulation parameters which enable / disable physics in parameter object changed. \end{DoxyCompactList}\item 
+void \hyperlink{classcudanusquids_1_1CudaNusquids_a90201547b37fb8c0e9ec66d3a92f5a94}{initial\+Flux\+Changed} ()
+\begin{DoxyCompactList}\small\item\em Notify a \hyperlink{classcudanusquids_1_1CudaNusquids}{Cuda\+Nusquids} instance that initial flux in parameter object changed. \end{DoxyCompactList}\item 
+void \hyperlink{classcudanusquids_1_1CudaNusquids_a3024be5a16f1f77eeaff9453b0ee6e8e}{additional\+Data\+Changed} ()
+\begin{DoxyCompactList}\small\item\em Notify a \hyperlink{classcudanusquids_1_1CudaNusquids}{Cuda\+Nusquids} instance that additional data in parameter object changed. \end{DoxyCompactList}\item 
+void \hyperlink{classcudanusquids_1_1CudaNusquids_ad964b26a1df1c644b90c9ca607332f26}{set\+Body} (const Body \&body\+\_\+, int device\+Id)
+\begin{DoxyCompactList}\small\item\em Set body for G\+PU with device id device\+Id. \end{DoxyCompactList}\item 
+void \hyperlink{classcudanusquids_1_1CudaNusquids_a22cfcad0e0119c12ef7b0fb98d55f6fa}{set\+Tracks} (const std\+::vector$<$ Track $>$ \&tracks\+\_\+)\hypertarget{classcudanusquids_1_1CudaNusquids_a22cfcad0e0119c12ef7b0fb98d55f6fa}{}\label{classcudanusquids_1_1CudaNusquids_a22cfcad0e0119c12ef7b0fb98d55f6fa}
+
+\begin{DoxyCompactList}\small\item\em Set neutrino tracks. Must be one track per path. \end{DoxyCompactList}\item 
+ode\+::\+R\+Kstats \hyperlink{classcudanusquids_1_1CudaNusquids_ae143edbe4de53f5cc38cd47169ae1d15}{get\+R\+Kstats} (int index\+\_\+path) const 
+\begin{DoxyCompactList}\small\item\em Get Runge-\/\+Kutta stats after evolution. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\subsubsection*{template$<$int N\+F\+L\+V\+S\+\_\+, class body\+\_\+t, class Op\+\_\+t = Physics\+Ops$>$\\*
+class cudanusquids\+::\+Cuda\+Nusquids$<$ N\+F\+L\+V\+S\+\_\+, body\+\_\+t, Op\+\_\+t $>$}
+
+This is the main class of of the library. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em N\+F\+L\+V\+S\+\_\+} & Number of neutrino flavors \\
+\hline
+{\em body\+\_\+t} & The body type which provides density lookup \\
+\hline
+{\em Op\+\_\+t} & The operators for physics simulation. (optional, default behaviour provided by struct \hyperlink{structcudanusquids_1_1PhysicsOps}{Physics\+Ops}) \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\index{cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}!Cuda\+Nusquids@{Cuda\+Nusquids}}
+\index{Cuda\+Nusquids@{Cuda\+Nusquids}!cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}}
+\subsubsection[{\texorpdfstring{Cuda\+Nusquids(\+Nus\+\_\+t \&other)}{CudaNusquids(Nus_t &other)}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+S\+\_\+, class body\+\_\+t , class Op\+\_\+t  = Physics\+Ops$>$ template$<$class Nus\+\_\+t $>$ {\bf cudanusquids\+::\+Cuda\+Nusquids}$<$ N\+F\+L\+V\+S\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::{\bf Cuda\+Nusquids} (
+\begin{DoxyParamCaption}
+\item[{Nus\+\_\+t \&}]{other}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classcudanusquids_1_1CudaNusquids_a67201994f00eba7e8c24aca9ff64ecce}{}\label{classcudanusquids_1_1CudaNusquids_a67201994f00eba7e8c24aca9ff64ecce}
+
+
+Constructor to change body type. 
+
+other will be moved to $\ast$this. other must not be accessed afterwards. \index{cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}!Cuda\+Nusquids@{Cuda\+Nusquids}}
+\index{Cuda\+Nusquids@{Cuda\+Nusquids}!cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}}
+\subsubsection[{\texorpdfstring{Cuda\+Nusquids(std\+::shared\+\_\+ptr$<$ Parameter\+Object $>$ \&params, int batchsize\+Limit)}{CudaNusquids(std::shared_ptr< ParameterObject > &params, int batchsizeLimit)}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+S\+\_\+, class body\+\_\+t , class Op\+\_\+t  = Physics\+Ops$>$ {\bf cudanusquids\+::\+Cuda\+Nusquids}$<$ N\+F\+L\+V\+S\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::{\bf Cuda\+Nusquids} (
+\begin{DoxyParamCaption}
+\item[{std\+::shared\+\_\+ptr$<$ {\bf Parameter\+Object} $>$ \&}]{params, }
+\item[{int}]{batchsize\+Limit}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classcudanusquids_1_1CudaNusquids_a1df9cd5fddc4cde9d8056a10348187f7}{}\label{classcudanusquids_1_1CudaNusquids_a1df9cd5fddc4cde9d8056a10348187f7}
+
+
+Construct \hyperlink{classcudanusquids_1_1CudaNusquids}{Cuda\+Nusquids} from \hyperlink{structcudanusquids_1_1ParameterObject}{Parameter\+Object}. 
+
+batchsize\+Limit determines the maximum number of neutrino paths, which are processed simultaneously per G\+PU. If the number of paths is greater than batchsize\+Limit, paths are processed in chunks of size batchsize\+Limit This effectively controls the G\+PU memory usage, since there only has to be enough memory to process batchsize\+Limit paths 
+
+\subsection{Member Function Documentation}
+\index{cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}!additional\+Data\+Changed@{additional\+Data\+Changed}}
+\index{additional\+Data\+Changed@{additional\+Data\+Changed}!cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}}
+\subsubsection[{\texorpdfstring{additional\+Data\+Changed()}{additionalDataChanged()}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+S\+\_\+, class body\+\_\+t , class Op\+\_\+t  = Physics\+Ops$>$ void {\bf cudanusquids\+::\+Cuda\+Nusquids}$<$ N\+F\+L\+V\+S\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::additional\+Data\+Changed (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classcudanusquids_1_1CudaNusquids_a3024be5a16f1f77eeaff9453b0ee6e8e}{}\label{classcudanusquids_1_1CudaNusquids_a3024be5a16f1f77eeaff9453b0ee6e8e}
+
+
+Notify a \hyperlink{classcudanusquids_1_1CudaNusquids}{Cuda\+Nusquids} instance that additional data in parameter object changed. 
+
+Needs to be called before \hyperlink{classcudanusquids_1_1CudaNusquids_a67f231ca290b2c7b89e749b8c8bb2abb}{Cuda\+Nusquids\+::evolve()} after calls to \hyperlink{structcudanusquids_1_1ParameterObject_a1c4d9b3219f1a6e563a7c79920148369}{Parameter\+Object\+::register\+Additional\+Data} \hyperlink{structcudanusquids_1_1ParameterObject_a70bad51407513e04ad2f542418be5915}{Parameter\+Object\+::clear\+Additional\+Data} \index{cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}!get\+R\+Kstats@{get\+R\+Kstats}}
+\index{get\+R\+Kstats@{get\+R\+Kstats}!cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}}
+\subsubsection[{\texorpdfstring{get\+R\+Kstats(int index\+\_\+path) const }{getRKstats(int index_path) const }}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+S\+\_\+, class body\+\_\+t , class Op\+\_\+t  = Physics\+Ops$>$ ode\+::\+R\+Kstats {\bf cudanusquids\+::\+Cuda\+Nusquids}$<$ N\+F\+L\+V\+S\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::get\+R\+Kstats (
+\begin{DoxyParamCaption}
+\item[{int}]{index\+\_\+path}
+\end{DoxyParamCaption}
+) const\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classcudanusquids_1_1CudaNusquids_ae143edbe4de53f5cc38cd47169ae1d15}{}\label{classcudanusquids_1_1CudaNusquids_ae143edbe4de53f5cc38cd47169ae1d15}
+
+
+Get Runge-\/\+Kutta stats after evolution. 
+
+members of R\+Kstats\+: unsigned int steps; // number of required steps unsigned int repeats; // number of repeated steps Status status; // success or failure \index{cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}!initial\+Flux\+Changed@{initial\+Flux\+Changed}}
+\index{initial\+Flux\+Changed@{initial\+Flux\+Changed}!cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}}
+\subsubsection[{\texorpdfstring{initial\+Flux\+Changed()}{initialFluxChanged()}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+S\+\_\+, class body\+\_\+t , class Op\+\_\+t  = Physics\+Ops$>$ void {\bf cudanusquids\+::\+Cuda\+Nusquids}$<$ N\+F\+L\+V\+S\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::initial\+Flux\+Changed (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classcudanusquids_1_1CudaNusquids_a90201547b37fb8c0e9ec66d3a92f5a94}{}\label{classcudanusquids_1_1CudaNusquids_a90201547b37fb8c0e9ec66d3a92f5a94}
+
+
+Notify a \hyperlink{classcudanusquids_1_1CudaNusquids}{Cuda\+Nusquids} instance that initial flux in parameter object changed. 
+
+Needs to be called before \hyperlink{classcudanusquids_1_1CudaNusquids_a67f231ca290b2c7b89e749b8c8bb2abb}{Cuda\+Nusquids\+::evolve()} after calls to \hyperlink{structcudanusquids_1_1ParameterObject_a420592083eba134c1517f69fce11e170}{Parameter\+Object\+::set\+Initial\+Flux} \index{cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}!mixing\+Parameters\+Changed@{mixing\+Parameters\+Changed}}
+\index{mixing\+Parameters\+Changed@{mixing\+Parameters\+Changed}!cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}}
+\subsubsection[{\texorpdfstring{mixing\+Parameters\+Changed()}{mixingParametersChanged()}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+S\+\_\+, class body\+\_\+t , class Op\+\_\+t  = Physics\+Ops$>$ void {\bf cudanusquids\+::\+Cuda\+Nusquids}$<$ N\+F\+L\+V\+S\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::mixing\+Parameters\+Changed (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classcudanusquids_1_1CudaNusquids_a8a61b830c0ac8650f4a52506b56c8c78}{}\label{classcudanusquids_1_1CudaNusquids_a8a61b830c0ac8650f4a52506b56c8c78}
+
+
+Notify a \hyperlink{classcudanusquids_1_1CudaNusquids}{Cuda\+Nusquids} instance that mixing parameters in parameter object changed. 
+
+Needs to be called before \hyperlink{classcudanusquids_1_1CudaNusquids_a67f231ca290b2c7b89e749b8c8bb2abb}{Cuda\+Nusquids\+::evolve()} after calls to \hyperlink{structcudanusquids_1_1ParameterObject_a645693f56eddd689c03638a2964471a0}{Parameter\+Object\+::\+Set\+\_\+\+Mixing\+Angle}, \hyperlink{structcudanusquids_1_1ParameterObject_ad1dbef9b9fac22a2ce4dd915a163ac0b}{Parameter\+Object\+::\+Set\+\_\+\+Square\+Mass\+Difference}, \hyperlink{structcudanusquids_1_1ParameterObject_a4845e30d03dadc06b2fb60214bb5fbdc}{Parameter\+Object\+::\+Set\+\_\+\+C\+P\+Phase} \index{cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}!set\+Body@{set\+Body}}
+\index{set\+Body@{set\+Body}!cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}}
+\subsubsection[{\texorpdfstring{set\+Body(const Body \&body\+\_\+, int device\+Id)}{setBody(const Body &body_, int deviceId)}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+S\+\_\+, class body\+\_\+t , class Op\+\_\+t  = Physics\+Ops$>$ void {\bf cudanusquids\+::\+Cuda\+Nusquids}$<$ N\+F\+L\+V\+S\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::set\+Body (
+\begin{DoxyParamCaption}
+\item[{const Body \&}]{body\+\_\+, }
+\item[{int}]{device\+Id}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classcudanusquids_1_1CudaNusquids_ad964b26a1df1c644b90c9ca607332f26}{}\label{classcudanusquids_1_1CudaNusquids_ad964b26a1df1c644b90c9ca607332f26}
+
+
+Set body for G\+PU with device id device\+Id. 
+
+The device\+Id must be identical to the one for which the body was created \index{cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}!simulation\+Flags\+Changed@{simulation\+Flags\+Changed}}
+\index{simulation\+Flags\+Changed@{simulation\+Flags\+Changed}!cudanusquids\+::\+Cuda\+Nusquids@{cudanusquids\+::\+Cuda\+Nusquids}}
+\subsubsection[{\texorpdfstring{simulation\+Flags\+Changed()}{simulationFlagsChanged()}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$int N\+F\+L\+V\+S\+\_\+, class body\+\_\+t , class Op\+\_\+t  = Physics\+Ops$>$ void {\bf cudanusquids\+::\+Cuda\+Nusquids}$<$ N\+F\+L\+V\+S\+\_\+, body\+\_\+t, Op\+\_\+t $>$\+::simulation\+Flags\+Changed (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}}\hypertarget{classcudanusquids_1_1CudaNusquids_ac3a20770b3e3a5d238bedea4d1e90272}{}\label{classcudanusquids_1_1CudaNusquids_ac3a20770b3e3a5d238bedea4d1e90272}
+
+
+Notify a \hyperlink{classcudanusquids_1_1CudaNusquids}{Cuda\+Nusquids} instance that simulation parameters which enable / disable physics in parameter object changed. 
+
+Needs to be called before \hyperlink{classcudanusquids_1_1CudaNusquids_a67f231ca290b2c7b89e749b8c8bb2abb}{Cuda\+Nusquids\+::evolve()} after calls to \hyperlink{structcudanusquids_1_1ParameterObject_a9e75eed566861cab435b98341507ecf0}{Parameter\+Object\+::\+Set\+\_\+\+Include\+Oscillations}, \hyperlink{structcudanusquids_1_1ParameterObject_a00e926b5315942a062a5b70d8670d237}{Parameter\+Object\+::\+Set\+\_\+\+Non\+Coherent\+Rho\+Terms}, \hyperlink{structcudanusquids_1_1ParameterObject_ad1b85181d815fcff54cb12b8b4f342fa}{Parameter\+Object\+::\+Set\+\_\+\+Interactions\+Rho\+Terms} \hyperlink{structcudanusquids_1_1ParameterObject_a48fdc0ae44ad616da881d9f0039a5dc8}{Parameter\+Object\+::\+Set\+\_\+\+N\+C\+Interactions} \hyperlink{structcudanusquids_1_1ParameterObject_a365a78c6d394132eafa70beda0983684}{Parameter\+Object\+::\+Set\+\_\+\+Tau\+Regeneration} \hyperlink{structcudanusquids_1_1ParameterObject_ae5ba20ebc5761236832f08b4c982e59c}{Parameter\+Object\+::\+Set\+\_\+\+Glashow\+Resonance} 
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+include/cudanu\+S\+Qu\+I\+D\+S/cudanusquids.\+cuh\end{DoxyCompactItemize}

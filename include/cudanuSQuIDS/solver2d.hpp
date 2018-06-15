@@ -30,6 +30,25 @@ namespace cudanusquids{
 
     namespace ode{
 
+        /*
+            This is the solver which drives the integration of Version1.
+
+            Template parameter Stepper has to provide the following functions:
+
+            Stepper(); //default constructor
+
+            void init(int deviceId, size_t pitchx, size_t dimx, size_t dimy, size_t nSystems, size_t systemsize, size_t ode_system_size, void* userdata,
+                        void (*stepfunc)(const size_t* const activeIndices, size_t nIndices,
+                                            const double* const t, double* const y, double* const y_derived, void* userdata));
+
+            void step(const size_t* activeIndicesH, const size_t* activeIndicesD, size_t nIndices, double* y, const double* t, const double* h);
+
+            void step_apply(const size_t* activeIndicesH, const size_t* activeIndicesD, size_t nIndices, const double* t, const double* h,
+                                double* y, double* yerr, const double* dydt_in, double* dydt_out);
+
+            static constexpr unsigned int getOrder();
+        */
+
         template<typename Stepper, size_t nCopyStreams = 4>
         struct Solver2D{
 

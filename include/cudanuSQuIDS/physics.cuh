@@ -46,24 +46,74 @@ namespace cudanusquids{
                                     name = a##name ; \
                                 }
 
-
-template<unsigned int NFLV, class body_t, class Ops>
+/// \class Physics
+/// \brief Handles the derivation of all bins of a specific neutrino path at a specific time
+template<int NFLV_, class body_t, class Op_t>
 struct Physics{
 
-	static_assert(3 <= NFLV && NFLV <= 4, "Physics: not (3 <= NFLV && NFLV <= 4)");
+    // change this if more number of flavors are supported in sumath.cuh
+	static_assert(3 <= NFLV_ && NFLV_ <= 4, "Physics: not (3 <= NFLV && NFLV <= 4)");
 
-    static constexpr unsigned int NumNeu = NFLV;
+    static constexpr int NFLV = NFLV_;
     using BodyType = body_t;
+    using Ops = Op_t; // the default Op_t in CudaNusquids is struct PhysicsOps
+
+/*
+        Op_t has to provide the following functions:
+
+        __host__ __device__
+        PhysicsOps();
+
+        __host__ __device__
+        ~PhysicsOps();
+
+        template<class Physics>
+        __device__
+        void addToPrederive(Physics& base, double time) const;
+
+        template<class Physics>
+        __device__
+        void H0(const Physics& base, double out[], int index_rho, int index_energy) const;
+
+        template<class Physics>
+        __device__
+        void HI(const Physics& base, double out[],
+                int index_rho, int index_energy) const;
+
+        template<class Physics>
+        __device__
+        void GammaRho(const Physics& base, double out[],
+                        int index_rho, int index_energy) const;
+
+        template<class Physics>
+        __device__
+        void InteractionsRho(const Physics& base, double out[],
+                                    int index_rho, int index_energy) const;
+*/
 
     Ops ops;
 
+    /// \brief List of energy bins. length n_energies
 	const double* energyList;
-    const double* cstates; // pointer to current state. during derivation, cstates == y, else cstates == states
+    /// \brief pointer to current state. during derivation, cstates == y, else cstates == states
+    const double* cstates;
 	const double* y; // set by solver
+    /// \brief mass projectors.
+    /// \details density matrix, NFLV x NFLV. The i-th entry for mass basis f is b0proj[f + b0offset * i];
     const double* b0proj;
+    /// \brief flavor projectors.
+    /// \details density matrix, NFLV x NFLV. The i-th entry for flavor basis f with index_rho is b1proj[index_rho * NFLV + flv + i * b1offset]
 	const double* b1proj;
+    /// \brief Matrix of mass differences.
+    /// \details density matrix, NFLV x NFLV
     const double* dm2;
+    /// \brief Time-independent hamiltonion for each energy bin.
+    /// \details density matrix, NFLV x NFLV. Get pointer to first element of energy bin index_energy via
+    /// double* h0data = getPitchedElement(H0_array, 0, index_energy, h0pitch);
+    /// then get i-th matrix element with h0data[i * h0offset];
 	const double* H0_array;
+    /// \brief Energy difference between the energy bins
+    /// \details Length n_energies. delE[i+1] = energyList[i+1] - energyList[i], delE[0] = 0.0
 	const double* delE;
 
     GETSET(energyList, const double*)
@@ -75,10 +125,24 @@ struct Physics{
     GETSET(H0_array, const double*)
     GETSET(delE, const double*)
 
+    /// \brief Neutrino states
+    /// \details density matrix, NFLV x NFLV. Get pointer to first element of density matrix of energy bin index_energy and index_rho via
+    /// double* statedata = getPitchedElement(cstates, index_rho * NFLV * NFLV, index_energy, statesPitch);
+    /// then get i-th matrix element with statedata[i * statesOffset];
 	double* states;
-	double* y_derived; // set by solver
+	double* y_derived; // set by solver, output of derivation step
+    /// \brief Flavor projectors in the interaction picture
+    /// \details density matrix, NFLV x NFLV. Get pointer to first element of specific density matrix via
+    /// double* evolb1data = getPitchedElement(evolB1proj, index_rho * NFLV * NFLV * NFLV + index_flv * NFLV * NFLV, index_energy, evolB1pitch);
+    /// then get i-th matrix element with evolb1data[i * evoloffset];
     double* evolB1proj;
+
+    /// \brief The current neutrino fluxes
+    /// \details Stores the current neutrino fluxes during a derivation step. Get pointer via
+    /// double* fluxptr = getPitchedElement(fluxes,index_rho * NFLV, flv * fluxOffset + index_energy, fluxPitch)
+    /// Then get flux with double flux = *fluxptr;
 	double* fluxes;
+    //helper arrays to store interaction results
     double* nc_array;
 	double* tau_decay_fluxes;
 	double* tau_bar_decay_fluxes;
@@ -97,62 +161,81 @@ struct Physics{
     GETSET(tau_lep_array, double*)
     GETSET(gr_array, double*)
 
+    /// \brief user-defined arrays specified via ParameterObject::registerAdditionalData
     void** additionalData;
 
     GETSET(additionalData, void**)
 
+    /// \brief The current density
 	double density;
+    /// \brief The current electron fraction
 	double electronFraction;
+    /// \brief The current time
 	double t;
 
     GETSET(density, double)
     GETSET(electronFraction, double)
     GETSET(t, double)
 
-    size_t max_n_cosines;
-	size_t n_rhos;
-	size_t n_energies;
-    size_t indexInBatch;
-    size_t globalPathId;
-    size_t b0offset;
-	size_t b1offset;
-	size_t evolB1pitch;
-	size_t evoloffset;
-	size_t h0pitch;
-	size_t h0offset;
-	size_t statesOffset;
-	size_t statesPitch;
-	size_t fluxPitch;
+    /// \brief maximum number of simultaneous paths
+    int max_n_cosines;
+    /// \brief Number of neutrino types. n_rhos = 2 if neutrinoType == both, else n_rhos = 1
+	int n_rhos;
+    /// \brief Number of energy bins
+	int n_energies;
+    /// \brief The cosine bin local to the current batch. indexInBatch < max_n_cosines
+    int indexInBatch;
+    /// \brief The cosine bin
+    int globalPathId;
 
-    GETSET(max_n_cosines, size_t)
-    GETSET(n_rhos, size_t)
-    GETSET(n_energies, size_t)
-    GETSET(indexInBatch, size_t)
-    GETSET(globalPathId, size_t)
-    GETSET(b0offset, size_t)
-    GETSET(b1offset, size_t)
-    GETSET(evolB1pitch, size_t)
-    GETSET(evoloffset, size_t)
-    GETSET(h0pitch, size_t)
-    GETSET(h0offset, size_t)
-    GETSET(statesOffset, size_t)
-    GETSET(statesPitch, size_t)
-    GETSET(fluxPitch, size_t)
+    // variables which specify memory layout
+    int b0offset;
+	int b1offset;
+	int evolB1pitch;
+	int evoloffset;
+	int h0pitch;
+	int h0offset;
+	int statesOffset;
+	int statesPitch;
+	int fluxOffset;
+	int fluxPitch;
 
+    GETSET(max_n_cosines, int)
+    GETSET(n_rhos, int)
+    GETSET(n_energies, int)
+    GETSET(indexInBatch, int)
+    GETSET(globalPathId, int)
+    GETSET(b0offset, int)
+    GETSET(b1offset, int)
+    GETSET(evolB1pitch, int)
+    GETSET(evoloffset, int)
+    GETSET(h0pitch, int)
+    GETSET(h0offset, int)
+    GETSET(statesOffset, int)
+    GETSET(statesPitch, int)
+	GETSET(fluxOffset, int)
+    GETSET(fluxPitch, int)
+
+    /// \brief The body
 	BodyType body;
+    /// \brief The track
 	typename BodyType::Track track;
 
     GETSET(body, BodyType)
     GETSET(track, typename BodyType::Track)
 
+    /// \brief Cross-section lookup table
 	InteractionStructureGpu intstruct;
+    /// \brief Inverse interaction lengths lookup table
 	InteractionStateGpu intstate;
 
     GETSET(intstruct, InteractionStructureGpu)
     GETSET(intstate, InteractionStateGpu)
 
+    /// \brief Basis of states. (mass or interaction)
 	nusquids::Basis basis;
 	detail::Flags flags;
+    /// \brief NeutrinoType
 	nusquids::NeutrinoType neutrinoType;
 
     GETSET(basis, nusquids::Basis)
@@ -186,7 +269,7 @@ struct Physics{
      */
 
     DEVICEQUALIFIER
-    double getExpectationValue(const double* op, size_t opoffset, size_t index_rho, size_t index_energy) const{
+    double getExpectationValue(const double* op, int opoffset, int index_rho, int index_energy) const{
         const double* h0data = getPitchedElement(H0_array, 0, index_energy, h0pitch);
 
         double opl[NFLV * NFLV];
@@ -212,7 +295,7 @@ struct Physics{
     }
 
     DEVICEQUALIFIER
-    double evalMassAtNode(unsigned int flv, size_t index_rho, size_t index_energy) const{
+    double evalMassAtNode(int flv, int index_rho, int index_energy) const{
         double b0[NFLV * NFLV];
 
         #pragma unroll
@@ -240,7 +323,7 @@ struct Physics{
     }
 
     DEVICEQUALIFIER
-    double evalFlavorAtNode(unsigned int flv, size_t index_rho, size_t index_energy) const{
+    double evalFlavorAtNode(int flv, int index_rho, int index_energy) const{
         double b1[NFLV * NFLV];
 
         const double* b1data = b1proj
@@ -309,7 +392,7 @@ struct Physics{
     DEVICEQUALIFIER
     void evolveProjectors(double time) const{
 
-        for(size_t index_energy = threadIdx.x + blockIdx.x * blockDim.x;
+        for(int index_energy = threadIdx.x + blockIdx.x * blockDim.x;
             index_energy < n_energies;
             index_energy += blockDim.x * gridDim.x){
 
@@ -319,10 +402,10 @@ struct Physics{
 
             sumath::prepareEvolution(evolbuf, time, h0data, h0offset);
 
-            for(unsigned int index_rho = 0; index_rho < n_rhos; index_rho++){
+            for(int index_rho = 0; index_rho < n_rhos; index_rho++){
 
                 #pragma unroll
-                for(unsigned int index_flv = 0; index_flv < NFLV; index_flv++){
+                for(int index_flv = 0; index_flv < NFLV; index_flv++){
                     double proj[NFLV * NFLV];
                     double evolproj[NFLV * NFLV];
 
@@ -354,24 +437,24 @@ struct Physics{
     void updateInteractionStruct() const{
 
         const bool useGlashowInt = (flags.useGlashowResonance && (neutrinoType == nusquids::NeutrinoType::both || neutrinoType == nusquids::NeutrinoType::antineutrino));
-        const size_t antirho = (neutrinoType == nusquids::NeutrinoType::both ? 1 : 0);
+        const int antirho = (neutrinoType == nusquids::NeutrinoType::both ? 1 : 0);
 
         const double nucleonNumber = getNucleonNumber();
 
         double* invlengr_ptr = &(intstate.invlen_GR[0]);
 
-        for(size_t index_rho = 0; index_rho < n_rhos; index_rho++){
-            const size_t invlenindex = index_rho * NFLV * n_energies;
+        for(int index_rho = 0; index_rho < n_rhos; index_rho++){
+            const int invlenindex = index_rho * NFLV * n_energies;
 
             double* invlennc_ptr = &(intstate.invlen_NC[invlenindex]);
             double* invlencc_ptr = &(intstate.invlen_CC[invlenindex]);
             double* invlenint_ptr = &(intstate.invlen_INT[invlenindex]);
 
-            for(size_t index_energy = threadIdx.x + blockIdx.x * blockDim.x;
+            for(int index_energy = threadIdx.x + blockIdx.x * blockDim.x;
                     index_energy < n_energies;
                     index_energy += blockDim.x * gridDim.x){
 
-                for(size_t index_flv = 0; index_flv < NFLV; index_flv++){
+                for(int index_flv = 0; index_flv < NFLV; index_flv++){
 
                     double invlenNC = intstruct.sigma_NC[index_rho * NFLV * n_energies + index_flv * n_energies + index_energy];
                 	double invlenCC = intstruct.sigma_CC[index_rho * NFLV * n_energies + index_flv * n_energies + index_energy];
@@ -401,9 +484,7 @@ struct Physics{
     DEVICEQUALIFIER
     void calculateCurrentFlavorFluxes() const{
 
-        const size_t fluxPitchDoubles = fluxPitch / sizeof(double);
-
-        for(size_t index_rho = 0; index_rho < n_rhos; index_rho++){
+        for(int index_rho = 0; index_rho < n_rhos; index_rho++){
 
             double* fluxCosRho = getPitchedElement(fluxes,
                                             index_rho * NFLV,
@@ -411,7 +492,7 @@ struct Physics{
                                             fluxPitch);
 
 
-            for(size_t index_energy = threadIdx.x + blockIdx.x * blockDim.x;
+            for(int index_energy = threadIdx.x + blockIdx.x * blockDim.x;
                 index_energy < n_energies;
                 index_energy += blockDim.x * gridDim.x){
 
@@ -427,7 +508,7 @@ struct Physics{
                     state[i] = statedata[i*statesOffset];
                 }
 
-                for(size_t flv = 0; flv < NFLV; flv++){
+                for(int flv = 0; flv < NFLV; flv++){
                     double proj[NFLV * NFLV];
 
                     const double* evoldata = getPitchedElement(evolB1proj,
@@ -441,7 +522,7 @@ struct Physics{
                     }
 
                     const double flux = sumath::sutrace(proj, state);
-                    fluxCosRho[flv * fluxPitchDoubles + index_energy] = flux;
+                    fluxCosRho[flv * fluxOffset + index_energy] = flux;
                 }
             }
         }
@@ -450,11 +531,9 @@ struct Physics{
     DEVICEQUALIFIER
     void updateNCArrays() const{
 
-        const size_t fluxPitchDoubles = fluxPitch / sizeof(double);
+        for(int index_rho = 0; index_rho < n_rhos; index_rho++){
 
-        for(size_t index_rho = 0; index_rho < n_rhos; index_rho++){
-
-            const size_t ncarrayBaseIndex = index_rho * NFLV * n_energies;
+            const int ncarrayBaseIndex = index_rho * NFLV * n_energies;
 
             const double* fluxCosRho = getPitchedElement(fluxes,
                                             index_rho * NFLV,
@@ -464,16 +543,16 @@ struct Physics{
             const double* invlennc = &(intstate.invlen_NC[index_rho * NFLV * n_energies]);
             const double* dndenc = &(intstruct.dNdE_NC[index_rho * NFLV * n_energies * n_energies]);
 
-            for(size_t e1 = threadIdx.x + blockIdx.x * blockDim.x; e1 < n_energies; e1 += blockDim.x * gridDim.x){
+            for(int e1 = threadIdx.x + blockIdx.x * blockDim.x; e1 < n_energies; e1 += blockDim.x * gridDim.x){
 
                 double e1_contribution[3] = {0.0, 0.0, 0.0};
 
-                for(size_t e2 = 1; e2 < n_energies; e2++){
+                for(int e2 = 1; e2 < n_energies; e2++){
 
                     if(e1 < e2){
 
 
-                        const double mydelE = delE[e2-1];
+                        const double mydelE = delE[e2];
 
                         // calculate contribution for e, mu, tau
                         double invlen[3];
@@ -481,25 +560,25 @@ struct Physics{
                         double flux[3];
 
                         #pragma unroll
-                        for(size_t flv = 0; flv < 3; flv++){
+                        for(int flv = 0; flv < 3; flv++){
                             invlen[flv] = invlennc[flv * n_energies + e2];
-                            flux[flv] = fluxCosRho[flv * fluxPitchDoubles + e2];
+                            flux[flv] = fluxCosRho[flv * fluxOffset + e2];
                         }
 
                         #pragma unroll
-                        for(size_t flv = 0; flv < 3; flv++){
+                        for(int flv = 0; flv < 3; flv++){
                             dnde[flv] = dndenc[flv * n_energies * n_energies + e2 * n_energies + e1];
                         }
 
                         #pragma unroll
-                        for(size_t flv = 0; flv < 3; flv++){
+                        for(int flv = 0; flv < 3; flv++){
                             e1_contribution[flv] += flux[flv] * invlen[flv] * mydelE * dnde[flv];
                         }
                     }
                 }
 
                 #pragma unroll
-                for(size_t flv = 0; flv < 3; flv++){
+                for(int flv = 0; flv < 3; flv++){
                     nc_array[ncarrayBaseIndex + flv * n_energies + e1] = e1_contribution[flv];
                 }
             }
@@ -509,9 +588,7 @@ struct Physics{
     DEVICEQUALIFIER
     void updateTauArraysPart1() const{
 
-        constexpr size_t tau_flv = 2;
-
-        const size_t fluxPitchDoubles = fluxPitch / sizeof(double);
+        constexpr int tau_flv = 2;
 
             double* decay_flux[2];
             decay_flux[0] = tau_decay_fluxes;
@@ -526,12 +603,12 @@ struct Physics{
             dndecc[0] = &(intstruct.dNdE_CC[0 * NFLV * n_energies * n_energies + tau_flv * n_energies * n_energies]);
             dndecc[1] = &(intstruct.dNdE_CC[1 * NFLV * n_energies * n_energies + tau_flv * n_energies * n_energies]);
 
-            for(size_t et = threadIdx.x + blockIdx.x * blockDim.x; et < n_energies; et += blockDim.x * gridDim.x){
+            for(int et = threadIdx.x + blockIdx.x * blockDim.x; et < n_energies; et += blockDim.x * gridDim.x){
 
             double contribution[2] = {0.0, 0.0};
 
             if(0 < et){
-                const double delEet = delE[et - 1];
+                const double delEet = delE[et];
 
                 #pragma unroll
                 for(int rho = 0; rho < 2; rho++){
@@ -541,15 +618,15 @@ struct Physics{
                                         0,
                                         fluxPitch);
 
-                    for(size_t en = 2; en < n_energies; en++){
+                    for(int en = 2; en < n_energies; en++){
 
 
                         if(et < en){
 
-                            const double delEen = delE[en - 1];
+                            const double delEen = delE[en];
                             const double invlen = invlencc[rho][en];
 
-                            double flux = fluxCosRho[tau_flv * fluxPitchDoubles + en];
+                            double flux = fluxCosRho[tau_flv * fluxOffset + en];
 
                             if(flux < 0) flux = 0;
 
@@ -571,13 +648,13 @@ struct Physics{
     DEVICEQUALIFIER
     void updateTauArraysPart2() const{
 
-            for(size_t en = threadIdx.x + blockDim.x * blockIdx.x; en < n_energies; en += blockDim.x * gridDim.x){
+            for(int en = threadIdx.x + blockDim.x * blockIdx.x; en < n_energies; en += blockDim.x * gridDim.x){
                 double tau_hadlep_contribution = 0.0;
                 double tau_bar_hadlep_contribution = 0.0;
                 double tau_lep_contribution = 0.0;
                 double tau_bar_lep_contribution = 0.0;
 
-                for(size_t et = 1; et < n_energies - 1; et++){
+                for(int et = 1; et < n_energies - 1; et++){
 
                     if(en < et){
 
@@ -611,26 +688,24 @@ struct Physics{
 
         constexpr unsigned int electronflavor = 0;
 
-        const size_t index_rho = (neutrinoType == nusquids::NeutrinoType::both ? 1 : 0);
-
-        const size_t fluxPitchDoubles = fluxPitch / sizeof(double);
+        const int index_rho = (neutrinoType == nusquids::NeutrinoType::both ? 1 : 0);
 
         const double* fluxCosRho = getPitchedElement(fluxes,
                                             index_rho * NFLV,
                                             0,
                                             fluxPitch);
 
-        for(size_t e1 = threadIdx.x + blockIdx.x * blockDim.x; e1 < n_energies; e1 += blockDim.x * gridDim.x){
+        for(int e1 = threadIdx.x + blockIdx.x * blockDim.x; e1 < n_energies; e1 += blockDim.x * gridDim.x){
             double e1_contribution = 0.0;
 
-            for(size_t e2 = 1; e2 < n_energies; e2++){
+            for(int e2 = 1; e2 < n_energies; e2++){
 
 
                 if(e1 < e2){
-                    const double myDelE = delE[e2 - 1];
+                    const double myDelE = delE[e2];
                     const double invlen = intstate.invlen_GR[e2];
                     const double* dndegr_ptr = &(intstruct.dNdE_GR[e2 * n_energies]);
-                    const double flux = fluxCosRho[electronflavor * fluxPitchDoubles + e2];
+                    const double flux = fluxCosRho[electronflavor * fluxOffset + e2];
                     const double flux_invlen_dele = flux * invlen * myDelE;
 
                     const double dnde = dndegr_ptr[e1];
@@ -653,9 +728,9 @@ struct Physics{
 
         // derive every matrix
 
-        for(size_t index_rho = 0; index_rho < n_rhos; index_rho++){
+        for(int index_rho = 0; index_rho < n_rhos; index_rho++){
 
-            for(size_t index_energy = threadIdx.x + blockDim.x * blockIdx.x; index_energy < n_energies; index_energy += blockDim.x * gridDim.x){
+            for(int index_energy = threadIdx.x + blockDim.x * blockIdx.x; index_energy < n_energies; index_energy += blockDim.x * gridDim.x){
 
                 #pragma unroll
                 for(int i = 0; i < NFLV * NFLV; i++){
@@ -703,9 +778,7 @@ struct Physics{
 
                 }
 
-                if(flags.useNCInteractions
-                    || flags.useTauRegeneration
-                    || (flags.useGlashowResonance && neutrinoType != nusquids::NeutrinoType::neutrino)){
+                if(flags.useInteractionsRhoTerms){
 
                     ops.InteractionsRho(*this, tmp1, index_rho, index_energy);
 
@@ -739,9 +812,9 @@ struct Physics{
         double tmp1[NFLV*NFLV];
         double myCurrentState[NFLV*NFLV];
 
-        for(size_t index_rho = 0; index_rho < n_rhos; index_rho++){
+        for(int index_rho = 0; index_rho < n_rhos; index_rho++){
 
-            for(size_t index_energy = threadIdx.x + blockDim.x * blockIdx.x;
+            for(int index_energy = threadIdx.x + blockDim.x * blockIdx.x;
                 index_energy < n_energies;
                 index_energy += blockDim.x * gridDim.x){
 
@@ -806,16 +879,11 @@ struct Physics{
         barrier_path();
 
         // update interactions, if necessary
-        if(flags.useNonCoherentRhoTerms
-            || flags.useNCInteractions
-            || flags.useTauRegeneration
-            || flags.useGlashowResonance){
+        if(flags.canUseInteractions){
 
             updateInteractionStruct();
 
-            if(flags.useNCInteractions
-                || flags.useTauRegeneration
-                || flags.useGlashowResonance){
+            if(flags.useInteractionsRhoTerms){
 
                 calculateCurrentFlavorFluxes();
 
@@ -876,25 +944,25 @@ struct Physics{
     }
 
     DEVICEQUALIFIER
-    void H0(double out[], size_t index_rho, size_t index_energy) const{
+    void H0(double out[], int index_rho, int index_energy) const{
         ops.H0(*this, out, index_rho, index_energy);
     }
 
     DEVICEQUALIFIER
     void HI(double out[],
-            size_t index_rho, size_t index_energy) const{
+            int index_rho, int index_energy) const{
         ops.HI(*this, out, index_rho, index_energy);
     }
 
     DEVICEQUALIFIER
     void GammaRho(double out[],
-                    size_t index_rho, size_t index_energy) const{
+                    int index_rho, int index_energy) const{
         ops.GammaRho(*this, out, index_rho, index_energy);
     }
 
     DEVICEQUALIFIER
     void InteractionsRho(double out[],
-                                size_t index_rho, size_t index_energy) const{
+                                int index_rho, int index_energy) const{
         ops.InteractionsRho(*this, out, index_rho, index_energy);
     }
 };
@@ -904,44 +972,51 @@ struct Physics{
 #undef GETREFSET
 
 
-/**
-*
-* Physics operators
-*
-	**/
-
-template<unsigned int NFLV, class body_t>
+/// \class PhysicsOps
+/// \brief Defines the physical operators used for simulation
+///
 struct PhysicsOps{
 
     HOSTDEVICEQUALIFIER
     PhysicsOps(){}
     HOSTDEVICEQUALIFIER
-    ~PhysicsOps(){}    
+    ~PhysicsOps(){}
 
-    template<class OP>
+    /// \brief Perform custom updates before a derivation step
+    template<class Physics>
     DEVICEQUALIFIER
-    void addToPrederive(Physics<NFLV,body_t, OP>& base, double time) const{
+    void addToPrederive(Physics& base, double time) const{
 
     }
 
-    template<class OP>
+    /// \brief Calculate time-independent part of the Hamiltonian
+    /// \param base The physics object to which this function is applied
+    /// \param out Output array with length Physics::NFLV * Physics::NFLV
+    /// \param index_rho 0, if neutrinotype != Both. Else, 0 = neutrino, 1 = antineutrino
+    /// \param index_energy Index of energy bin.
+    template<class Physics>
     DEVICEQUALIFIER
-    void H0(const Physics<NFLV,body_t, OP>& base, double out[], size_t index_rho, size_t index_energy) const{
+    void H0(const Physics& base, double out[], int index_rho, int index_energy) const{
         const double energy = base.get_energyList()[index_energy];
 
         #pragma unroll
-	    for(size_t i = 0; i < NFLV * NFLV; ++i){
+	    for(int i = 0; i < Physics::NFLV * Physics::NFLV; ++i){
                 out[i] = base.get_dm2()[i] * (0.5 / energy);
 	    }
     }
 
-    template<class OP>
+    /// \brief Calculate time-dependent part of the Hamiltonian
+    /// \param base The physics object to which this function is applied
+    /// \param out Output array with length Physics::NFLV * Physics::NFLV
+    /// \param index_rho 0, if neutrinotype != Both. Else, 0 = neutrino, 1 = antineutrino
+    /// \param index_energy Index of energy bin.
+    template<class Physics>
     DEVICEQUALIFIER
-    void HI(const Physics<NFLV,body_t, OP>& base, double out[],
-            size_t index_rho, size_t index_energy) const{
+    void HI(const Physics& base, double out[],
+            int index_rho, int index_energy) const{
 
         #pragma unroll
-        for(size_t i = 0; i < NFLV * NFLV; ++i){
+        for(int i = 0; i < Physics::NFLV * Physics::NFLV; ++i){
             out[i] = 0;
         }
 
@@ -964,22 +1039,22 @@ struct PhysicsOps{
         const double CCNC = CC + NC;
 
         #pragma unroll
-        for(unsigned int j = 0; j < 3; j++){
-            double proj[NFLV * NFLV];
+        for(int j = 0; j < 3; j++){
+            double proj[Physics::NFLV * Physics::NFLV];
 
             const double* evoldata = getPitchedElement(base.get_evolB1proj(),
-                                                        index_rho * NFLV * NFLV * NFLV + j * NFLV * NFLV,
+                                                        index_rho * Physics::NFLV * Physics::NFLV * Physics::NFLV + j * Physics::NFLV * Physics::NFLV,
                                                         index_energy,
                                                         base.get_evolB1pitch());
 
             #pragma unroll
-            for(int i = 0; i < NFLV * NFLV; i++){
+            for(int i = 0; i < Physics::NFLV * Physics::NFLV; i++){
                 proj[i] = evoldata[i * base.get_evoloffset()];
             }
 
             // calculate HI (out)
             #pragma unroll
-            for(size_t i = 0; i < NFLV * NFLV; ++i){
+            for(int i = 0; i < Physics::NFLV * Physics::NFLV; ++i){
                 if(j == 0)
                     out[i] += CCNC * proj[i];
                 else
@@ -990,37 +1065,42 @@ struct PhysicsOps{
         if(base.get_basis() == nusquids::Basis::mass){
             const double* h0data = getPitchedElement(base.get_H0_array(), 0, index_energy, base.get_h0pitch());
             #pragma unroll
-            for(size_t i = 0; i < NFLV * NFLV; ++i){
+            for(int i = 0; i < Physics::NFLV * Physics::NFLV; ++i){
                 out[i] += h0data[i * base.get_h0offset()];
             }
         }
     }
 
-    template<class OP>
+    /// \brief Calculate absorbtion and attenuation
+    /// \param base The physics object to which this function is applied
+    /// \param out Output array with length Physics::NFLV * Physics::NFLV
+    /// \param index_rho 0, if neutrinotype != Both. Else, 0 = neutrino, 1 = antineutrino
+    /// \param index_energy Index of energy bin.
+    template<class Physics>
     DEVICEQUALIFIER
-    void GammaRho(const Physics<NFLV,body_t, OP>& base, double out[],
-                    size_t index_rho, size_t index_energy) const{
+    void GammaRho(const Physics& base, double out[],
+                    int index_rho, int index_energy) const{
 
-        const double* invlenint0_ptr = &(base.get_intstate().invlen_INT[index_rho * NFLV * base.get_n_energies() + 0 * base.get_n_energies()]);
-        const double* invlenint1_ptr = &(base.get_intstate().invlen_INT[index_rho * NFLV * base.get_n_energies() + 1 * base.get_n_energies()]);
-        const double* invlenint2_ptr = &(base.get_intstate().invlen_INT[index_rho * NFLV * base.get_n_energies() + 2 * base.get_n_energies()]);
+        const double* invlenint0_ptr = &(base.get_intstate().invlen_INT[index_rho * Physics::NFLV * base.get_n_energies() + 0 * base.get_n_energies()]);
+        const double* invlenint1_ptr = &(base.get_intstate().invlen_INT[index_rho * Physics::NFLV * base.get_n_energies() + 1 * base.get_n_energies()]);
+        const double* invlenint2_ptr = &(base.get_intstate().invlen_INT[index_rho * Physics::NFLV * base.get_n_energies() + 2 * base.get_n_energies()]);
 
-        const double* evoldata0 = getPitchedElement(base.get_evolB1proj(), index_rho * NFLV * NFLV * NFLV + 0 * NFLV * NFLV,
+        const double* evoldata0 = getPitchedElement(base.get_evolB1proj(), index_rho * Physics::NFLV * Physics::NFLV * Physics::NFLV + 0 * Physics::NFLV * Physics::NFLV,
                                                 index_energy,
                                                 base.get_evolB1pitch());
-        const double* evoldata1 = getPitchedElement(base.get_evolB1proj(), index_rho * NFLV * NFLV * NFLV + 1 * NFLV * NFLV,
+        const double* evoldata1 = getPitchedElement(base.get_evolB1proj(), index_rho * Physics::NFLV * Physics::NFLV * Physics::NFLV + 1 * Physics::NFLV * Physics::NFLV,
                                                 index_energy,
                                                 base.get_evolB1pitch());
-        const double* evoldata2 = getPitchedElement(base.get_evolB1proj(), index_rho * NFLV * NFLV * NFLV + 2 * NFLV * NFLV,
+        const double* evoldata2 = getPitchedElement(base.get_evolB1proj(), index_rho * Physics::NFLV * Physics::NFLV * Physics::NFLV + 2 * Physics::NFLV * Physics::NFLV,
                                                 index_energy,
                                                 base.get_evolB1pitch());
 
-        double proj0[NFLV * NFLV];
-        double proj1[NFLV * NFLV];
-        double proj2[NFLV * NFLV];
+        double proj0[Physics::NFLV * Physics::NFLV];
+        double proj1[Physics::NFLV * Physics::NFLV];
+        double proj2[Physics::NFLV * Physics::NFLV];
 
         #pragma unroll
-        for(int i = 0; i < NFLV * NFLV; i++){
+        for(int i = 0; i < Physics::NFLV * Physics::NFLV; i++){
             proj0[i] = evoldata0[i * base.get_evoloffset()];
             proj1[i] = evoldata1[i * base.get_evoloffset()];
             proj2[i] = evoldata2[i * base.get_evoloffset()];
@@ -1032,32 +1112,37 @@ struct PhysicsOps{
         const double invlen2 = invlenint2_ptr[index_energy];
 
         #pragma unroll
-        for(size_t i = 0; i < NFLV * NFLV; ++i){
+        for(int i = 0; i < Physics::NFLV * Physics::NFLV; ++i){
             out[i] = (proj0[i] * invlen0 * 0.5 + proj1[i] * invlen1 * 0.5 + proj2[i] * invlen2 * 0.5) ;
         }
     }
 
-    template<class OP>
+    /// \brief Calculate neutrino interactions
+    /// \param base The physics object to which this function is applied
+    /// \param out Output array with length Physics::NFLV * Physics::NFLV    
+    /// \param index_rho 0, if neutrinotype != Both. Else, 0 = neutrino, 1 = antineutrino
+    /// \param index_energy Index of energy bin.
+    template<class Physics>
     DEVICEQUALIFIER
-    void InteractionsRho(const Physics<NFLV,body_t, OP>& base, double out[],
-                                size_t index_rho, size_t index_energy) const{
+    void InteractionsRho(const Physics& base, double out[],
+                                int index_rho, int index_energy) const{
 
-        const size_t evolB1pitchDoubles = base.get_evolB1pitch() / sizeof(double);
+        const int evolB1pitchDoubles = base.get_evolB1pitch() / sizeof(double);
 
-        const double* evolB1projCosRho = getPitchedElement(base.get_evolB1proj(), index_rho * NFLV * NFLV * NFLV,
+        const double* evolB1projCosRho = getPitchedElement(base.get_evolB1proj(), index_rho * Physics::NFLV * Physics::NFLV * Physics::NFLV,
                                                 0,
                                                 base.get_evolB1pitch());
 
-        const double* evoldata0 = evolB1projCosRho + 0 * NFLV * NFLV * evolB1pitchDoubles + index_energy;
-        const double* evoldata1 = evolB1projCosRho + 1 * NFLV * NFLV * evolB1pitchDoubles + index_energy;
-        const double* evoldata2 = evolB1projCosRho + 2 * NFLV * NFLV * evolB1pitchDoubles + index_energy;
+        const double* evoldata0 = evolB1projCosRho + 0 * Physics::NFLV * Physics::NFLV * evolB1pitchDoubles + index_energy;
+        const double* evoldata1 = evolB1projCosRho + 1 * Physics::NFLV * Physics::NFLV * evolB1pitchDoubles + index_energy;
+        const double* evoldata2 = evolB1projCosRho + 2 * Physics::NFLV * Physics::NFLV * evolB1pitchDoubles + index_energy;
 
-        double proj0[NFLV * NFLV];
-        double proj1[NFLV * NFLV];
-        double proj2[NFLV * NFLV];
+        double proj0[Physics::NFLV * Physics::NFLV];
+        double proj1[Physics::NFLV * Physics::NFLV];
+        double proj2[Physics::NFLV * Physics::NFLV];
 
         #pragma unroll
-        for(int i = 0; i < NFLV * NFLV; i++){
+        for(int i = 0; i < Physics::NFLV * Physics::NFLV; i++){
             proj0[i] = evoldata0[i * base.get_evoloffset()];
             proj1[i] = evoldata1[i * base.get_evoloffset()];
             proj2[i] = evoldata2[i * base.get_evoloffset()];
@@ -1068,9 +1153,9 @@ struct PhysicsOps{
         double factor_tau = 0;
 
         if(base.get_flags().useNCInteractions){
-            const size_t ie = index_rho * NFLV * base.get_n_energies() + 0 * base.get_n_energies() + index_energy;
-            const size_t im = index_rho * NFLV * base.get_n_energies() + 1 * base.get_n_energies() + index_energy;
-            const size_t it = index_rho * NFLV * base.get_n_energies() + 2 * base.get_n_energies() + index_energy;
+            const int ie = index_rho * Physics::NFLV * base.get_n_energies() + 0 * base.get_n_energies() + index_energy;
+            const int im = index_rho * Physics::NFLV * base.get_n_energies() + 1 * base.get_n_energies() + index_energy;
+            const int it = index_rho * Physics::NFLV * base.get_n_energies() + 2 * base.get_n_energies() + index_energy;
 
             const double factor_e_nc = base.get_nc_array()[ie];
             const double factor_mu_nc = base.get_nc_array()[im];
@@ -1101,7 +1186,7 @@ struct PhysicsOps{
         }
 
         #pragma unroll
-        for(size_t i = 0; i < NFLV * NFLV; ++i){
+        for(int i = 0; i < Physics::NFLV * Physics::NFLV; ++i){
             out[i] = factor_e * proj0[i] + factor_mu * proj1[i] + factor_tau * proj2[i];
         }
     }

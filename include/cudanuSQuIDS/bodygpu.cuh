@@ -30,6 +30,118 @@ along with CUDAnuSQuIDS.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace cudanusquids{
 
+
+    /*
+        CudaNusquids uses static polymorphism to support different body types (Body type is a template parameter).
+
+        A body has to declare a nested class named Track. Track has to provide the following functions:
+
+        __host__ __device__
+        double getXBegin() const; // Return the begin of the trajectory.
+
+        __host__ __device__
+        double getXEnd() const; // Return the end of the trajectory
+
+        __host__ __device__
+        double getCurrentX() const; // Return the current position along the trajectory. getXBegin() <= getCurrentX() <= getXEnd()
+
+        __host__ __device__
+        void setCurrentX(double x); // Set current position along the trajectory
+
+        A body has to provide the following functions:
+
+        __device__
+        double getDensity(const Track& track) const; // Return density at position track.getCurrentX()
+
+        __device__
+        double getYe(const Track& track) const; // Return Ye at position track.getCurrentX()
+
+        __device__
+        bool isConstantDensity() const; // Return whether or not Body has a constant density
+    */
+
+
+    /*
+        Constant density
+    */
+
+    struct ConstantDensity{
+
+		struct Track{
+			double x_cur; //natural units
+			double x_begin; //natural units
+			double x_end; //natural units
+
+			HOSTDEVICEQUALIFIER
+			Track() : Track(double(0.0)){}
+
+			HOSTDEVICEQUALIFIER
+			Track(double baselineInKilometers)
+                : x_cur(0.0),
+                  x_begin(0.0),
+                  x_end(baselineInKilometers * Const::km()){
+
+			}
+
+			HOSTDEVICEQUALIFIER
+			double getXBegin() const{ return x_begin;}
+
+			HOSTDEVICEQUALIFIER
+			double getXEnd() const{ return x_end;}
+
+			HOSTDEVICEQUALIFIER
+			double getCurrentX() const{ return x_cur;}
+
+			HOSTDEVICEQUALIFIER
+			void setCurrentX(double x){x_cur = x;}
+		};
+
+		int deviceId;
+
+        double density;
+        double ye;
+
+		HOSTDEVICEQUALIFIER
+		ConstantDensity() : ConstantDensity(0.0, 0.0) {}
+
+		HOSTDEVICEQUALIFIER
+		ConstantDensity(double density, double ye)
+            : density(density), ye(ye){}
+
+		HOSTDEVICEQUALIFIER
+		double getDensity(const Track& track_earthatm) const{
+			return density;
+		}
+
+		HOSTDEVICEQUALIFIER
+		double getYe(const Track& track_earthatm) const{
+			return ye;
+		}
+
+		HOSTDEVICEQUALIFIER
+		bool isConstantDensity() const{
+			return true;
+		}
+
+        /*
+            Expects file to be a table with at least 3 columns.
+            First column contains radii, second column contains densities, third column contains electron fractions.
+            Like nuSQuIDS'/data/astro/EARTH_MODEL_PREM.dat
+        */
+		static ConstantDensity make_body_gpu(int deviceId, double density, double ye){
+			return ConstantDensity(density, ye);
+		}
+
+		static void destroy_body_gpu(ConstantDensity& constantDensityGpu){
+            //nothing to do here.
+		}
+	};
+
+
+    /*
+        Earth with atmosphere
+    */
+
 	struct EarthAtm{
 
 		struct Track{

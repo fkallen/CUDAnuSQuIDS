@@ -14,7 +14,9 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with CUDAnuSQuIDS.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "../nsi_atmospheric/customphysics.cuh"
+
+#include "../path.h"
+
 #include <cudanuSQuIDS/cudanusquids.cuh>
 #include <cudanuSQuIDS/hpc_helpers.hpp>
 
@@ -34,26 +36,29 @@ along with CUDAnuSQuIDS.  If not, see <http://www.gnu.org/licenses/>.
 #define DO_OUTPUT
 
 
-template<unsigned int NFLVS, unsigned int BATCH_SIZE_LIMIT>
-void run(std::shared_ptr<cudanusquids::ParameterObject>& params){
+template<unsigned int NFLVS>
+void run(std::shared_ptr<cudanusquids::ParameterObject>& params, const nusquids::marray<double,1>& cosineList, int batchsizeLimit){
 
     using Bodytype = cudanusquids::EarthAtm;
     //using Bodytype = cudanusquids::SunASnu;
 
-    cudanusquids::CudaNusquids<NFLVS, Bodytype, BATCH_SIZE_LIMIT, CustomPhysicsOps<NFLVS, Bodytype>> nus(params);
+    cudanusquids::CudaNusquids<NFLVS, cudanusquids::SunASnu> nustmp(params, batchsizeLimit);
+
+    cudanusquids::CudaNusquids<NFLVS, Bodytype> nus(nustmp);
 
     std::vector<Bodytype> gpuBodies(params->Get_DeviceIds().size());
     std::vector<typename Bodytype::Track> tracks;
 	tracks.reserve(params->getNumPaths());
 
     for(size_t i = 0; i < params->Get_DeviceIds().size(); i++){
-        gpuBodies[i] = cudanusquids::EarthAtm::make_body_gpu(params->Get_DeviceIds()[i], "../data/astro/EARTH_MODEL_PREM.dat");
-        //gpuBodies[i] = cudanusquids::SunASnu::make_body_gpu(params->Get_DeviceIds()[i], "../data/astro/bs05_agsop.dat");
-        nus.setBody(gpuBodies[i], i);
+        int deviceId = params->Get_DeviceIds()[i];
+        gpuBodies[i] = cudanusquids::EarthAtm::make_body_gpu(deviceId, EXAMPLE_DATA_PATH + "/astro/EARTH_MODEL_PREM.dat");
+        //gpuBodies[i] = cudanusquids::SunASnu::make_body_gpu(params->Get_DeviceIds()[i], EXAMPLE_DATA_PATH + "/astro/bs05_agsop.dat");
+        nus.setBody(gpuBodies[i], deviceId);
     }
 
-	for(size_t i = 0; i < params->getNumPaths(); i++){
-		tracks.emplace_back(params->getPathParameterList()[i]);
+	for(int i = 0; i < params->getNumPaths(); i++){
+		tracks.emplace_back(cosineList[i]);
 	}
 
 	nus.setTracks(tracks);
@@ -71,7 +76,7 @@ void run(std::shared_ptr<cudanusquids::ParameterObject>& params){
 	std::vector<double> nsicomponents = NSI.GetComponents();
 	params->registerAdditionalData(sizeof(double) * nsicomponents.size(), (const char*)nsicomponents.data());
 	params->registerAdditionalData(sizeof(double) * nsicomponents.size() * params->GetNumE()
-                                    * std::min(params->getNumPaths(), size_t(BATCH_SIZE_LIMIT)));
+                                    * std::min(params->getNumPaths(), batchsizeLimit));
 	nus.additionalDataChanged();
 
 TIMERSTARTCPU(evolve);
@@ -83,11 +88,11 @@ TIMERSTOPCPU(evolve);
 
     // check that every path was solved successfully and print some stats;
 
-    for(size_t i = 0; i < params->getNumPaths(); i++){
+    for(int i = 0; i < params->getNumPaths(); i++){
         const auto& stats = nus.getRKstats(i);
 
         if(stats.status != cudanusquids::ode::Status::success)
-            std::cout << "cosine " << params->getPathParameterList()[i] << " failed after " << stats.steps << " steps." << std::endl;
+            std::cout << "cosine " << cosineList[i] << " failed after " << stats.steps << " steps." << std::endl;
 
         //std::cout << i << " " << stats.steps << " " << stats.repeats << " " << stats.status << std::endl;
     }
@@ -97,12 +102,12 @@ TIMERSTOPCPU(evolve);
 
     std::ofstream out("out.txt");
     out << params->getNumPaths() << " " << params->GetNumE() << " " << params->GetNumRho() << " " << params->GetNumNeu() << '\n';
-    for(size_t flv = 0; flv < params->GetNumNeu(); flv++){
+    for(int flv = 0; flv < params->GetNumNeu(); flv++){
         out << "Flv " << flv << '\n';
-        for(size_t i = 0; i <params->getNumPaths(); i++){
-            out << "cos(th) = " << params->getPathParameterList()[i] << "\n";
-            for(size_t j = 0; j < params->GetNumE(); j++){
-                for(size_t k = 0; k < params->GetNumRho(); k++){
+        for(int i = 0; i <params->getNumPaths(); i++){
+            out << "cos(th) = " << cosineList[i] << "\n";
+            for(int j = 0; j < params->GetNumE(); j++){
+                for(int k = 0; k < params->GetNumRho(); k++){
                     const double val = nus.EvalFlavorAtNode(flv, i, k, j); CUERR;
                     out << std::setprecision(20) << val << " ";
                 }
@@ -128,19 +133,22 @@ int multigpu(int argc, char** argv){
     if(argc < 2) return -1;
 
     std::string mode(argv[1]);
-    if(mode != "c" && mode != "g") return -1;
+    if(mode != "c" && mode != "g"){
+		std::cout << "first argument must be 'c' or 'g' !" << std::endl;
+		return -1;
+	}
 
 	double Emin=1.e1 * Const::GeV();
 	double Emax=1.e6 * Const::GeV();
-	unsigned int n_energies = 1;
+	int n_energies = 1;
 
 	double czmin = -1;
 	double czmax = 0;
-	unsigned int n_cosines = 1;
+	int n_cosines = 1;
 
 	nusquids::NeutrinoType neutrinoType = nusquids::NeutrinoType::neutrino;
 
-	unsigned int n_neutrinos = 3;
+	int n_neutrinos = 3;
 
 	unsigned int flags = 1;
 	unsigned int nSteps = 2000;
@@ -176,8 +184,10 @@ int multigpu(int argc, char** argv){
 	bool useTauRegeneration = ((flags >> 3) & 0x1);// 8
 	bool useGlashowResonance = ((flags >> 4) & 0x1);// 16
 
-	bool anyInteractions = useNonCoherentRhoTerms || useNCInteractions
+	bool useInteractionsRhoTerms = useNCInteractions
 				|| useTauRegeneration || useGlashowResonance;
+
+	bool anyInteractions = useNonCoherentRhoTerms || useInteractionsRhoTerms;
 
 
 /*
@@ -209,7 +219,7 @@ int multigpu(int argc, char** argv){
 
 	std::shared_ptr<nusquids::NeutrinoCrossSections> crossSections = std::make_shared<nusquids::NeutrinoDISCrossSectionsFromTables>();
 	std::shared_ptr<cudanusquids::ParameterObject> params
-        = std::make_shared<cudanusquids::ParameterObject>(cosineList, energyList,
+        = std::make_shared<cudanusquids::ParameterObject>(cosineList.size(), energyList,
                                                         n_neutrinos, neutrinoType,
                                                         anyInteractions, crossSections);
 
@@ -217,6 +227,7 @@ int multigpu(int argc, char** argv){
 
 	params->Set_IncludeOscillations(useOscillation);
 	params->Set_NonCoherentRhoTerms(useNonCoherentRhoTerms);
+	params->Set_InteractionsRhoTerms(useInteractionsRhoTerms);
 	params->Set_NCInteractions(useNCInteractions);
 	params->Set_TauRegeneration(useTauRegeneration);
 	params->Set_GlashowResonance(useGlashowResonance);
@@ -262,10 +273,10 @@ int multigpu(int argc, char** argv){
 
     switch(n_neutrinos){
         case 3:{
-            run<3, 2000>(params);
+            run<3>(params, cosineList, 2000);
             break;}
         case 4:{
-            run<4, 2000>(params);
+            run<4>(params, cosineList, 2000);
             break;}
             default: printf("error\n");
     }

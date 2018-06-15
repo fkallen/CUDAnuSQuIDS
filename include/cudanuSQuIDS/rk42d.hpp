@@ -70,12 +70,42 @@ namespace cudanusquids{
 
                 RK42D& operator=(RK42D&& rhs);
 
+                /*
+                    Initialize stepper. Stepper will use gpu with id deviceId.
+                    Stepper will work with nSystems system simultaneously.
+
+                    One system has dimx * dimy elements and occupies pitchx * dimy bytes. the memory of a system can be padded such that dimx < pitchx / sizeof(double).
+                    Thus, including the padding a system has systemsize elements.
+
+                    ode_system_size is the combined total size of all systems, which is systemsize * nSystems
+                */
                 void init(int deviceId, size_t pitchx, size_t dimx, size_t dimy, size_t nSystems, size_t systemsize, size_t ode_system_size, void* userdata,
                             void (*stepfunc)(const size_t* const activeIndices, size_t nIndices,
                                                 const double* const t, double* const y, double* const y_derived, void* userdata));
 
+                /*
+                    activeIndicesH and activeIndicesD store the indices of paths which participate in the current step.
+                    For path activeIndicesD[i], perform  Runge-Kutta step for time t[activeIndicesD[i]] with step size h[activeIndicesD[i]]
+
+                    All pointers but activeIndicesH point to GPU memory.
+
+                    length(activeIndicesH) = length(activeIndicesD) = nIndices
+                    length(t) = length(h) = nSystems
+                    length(y) = ode_system_size
+                */
                 void step(const size_t* activeIndicesH, const size_t* activeIndicesD, size_t nIndices, double* y, const double* t, const double* h);
 
+                /*
+                    activeIndicesH and activeIndicesD store the indices of paths which participate in the current step.
+                    For path activeIndicesD[i], perform  Runge-Kutta step for time t[activeIndicesD[i]] with step size h[activeIndicesD[i]]
+                    and performs error estimation
+
+                    All pointers but activeIndicesH point to GPU memory.
+
+                    length(activeIndicesH) = length(activeIndicesD) = nIndices
+                    length(t) = length(h) = nSystems
+                    length(y) = length(yerr) = length(dydt_in) = length(dydt_out) = ode_system_size
+                */
                 void step_apply(const size_t* activeIndicesH, const size_t* activeIndicesD, size_t nIndices, const double* t, const double* h,
                                     double* y, double* yerr, const double* dydt_in, double* dydt_out);
 
