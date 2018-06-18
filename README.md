@@ -9,6 +9,7 @@ on multiple CUDA-capable GPUs
 
 CUDAnuSQuIDS is a CUDA implementation of nuSQuIDS https://github.com/arguelles/nuSQuIDS.
 
+CUDAnuSQuIDS supports three and four neutrino flavors, where the fourth flavor is assumed to be a sterile neutrino.
 
 ## Prerequisites
 Cuda compilation tools 9.1 or higher
