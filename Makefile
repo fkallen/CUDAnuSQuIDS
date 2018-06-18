@@ -34,12 +34,12 @@ LDFLAGS= $(HDF5_LDFLAGS) $(NUSQUIDS_LDFLAGS) $(SQUIDS_LDFLAGS) $(GSL_LDFLAGS) $(
 
 CPPFLAGS = -std=c++14
 
-CUDAARCH = -gencode arch=compute_61,code=sm_61 \
+CUDAARCH = -gencode arch=compute_60,code=sm_60 \
 	   -gencode arch=compute_61,code=sm_61 \
 	   -gencode arch=compute_70,code=sm_70 \
 	   -gencode arch=compute_70,code=compute_70
-	   
-	   
+
+
 NVCCFLAGS = $(CUDAARCH) -lineinfo --expt-relaxed-constexpr -Xcudafe "--diag_suppress=subscript_out_of_range" -rdc=true -Xcompiler "-fPIC -Wall"
 
 CU_SOURCES = $(wildcard src/*.cu)
@@ -77,8 +77,8 @@ examples/nsi/main: examples/nsi/main.cu $(DYNAMIC_LIBRARY)
 clean:
 	rm build/*.o
 	rm $(DYNAMIC_LIBRARY) $(STATIC_LIBRARY)
-	
-cleanexamples:	
+
+cleanexamples:
 	rm $(exampleList)
 
 install: $(STATIC_LIBRARY) $(DYNAMIC_LIBRARY)
