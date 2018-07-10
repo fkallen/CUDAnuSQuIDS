@@ -54,7 +54,7 @@ void run(std::shared_ptr<cudanusquids::ParameterObject>& params, const nusquids:
     for(size_t i = 0; i < params->Get_DeviceIds().size(); i++){
         /*
             Expects file to be a table with at least 3 columns.
-            First column contains radii, second column contains densities, third column contains hydrogenfractions.
+            First column contains radii, second column contains densities, third column contains electron fractions.
             Like nuSQuIDS'/data/astro/EARTH_MODEL_PREM.dat
         */
         gpuBodies[i] = cudanusquids::EarthAtm::make_body_gpu(params->Get_DeviceIds()[i], EXAMPLE_DATA_PATH + "/astro/EARTH_MODEL_PREM.dat"); //this file is identical to the file shipped with nuSQuIDS
