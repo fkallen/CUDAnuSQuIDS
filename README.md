@@ -90,3 +90,8 @@ i.e. additionalData[0] points to array created by first call to registerAddition
 The method CustomPhysicsOps::addToPrederive can be implemented to update user defined non constant GPU data before a derivation step.
 
 Please refer to examples/nsi/ to see a full example how to use custom physics
+
+# Publication
+This work is presented in the following paper.
+
+Felix Kallenborn, Christian Hundt, Sebastian Böser, Bertil Schmidt, Massively parallel computation of atmospheric neutrino oscillations on CUDA-enabled accelerators, Computer Physics Communications, Volume 234, https://doi.org/10.1016/j.cpc.2018.07.022
